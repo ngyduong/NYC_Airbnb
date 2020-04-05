@@ -1,0 +1,167 @@
+---
+title: "Apprentissage Statistique"
+subtitle: "New York city Airbnb"
+author: "Duong Nguyen & Julien Le Mauff"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=F, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+library(caret)
+library(dplyr)
+library(psych)
+library(caret)
+library(ggplot2)
+library(ggmap)
+```
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+data <- read.csv("Data/data.csv", sep = ",")
+```
+
+<!-- DATA EXPLORATION --> 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+summary(data[,-c(1:4,13)]) 
+# sans les ID, hostID, nom propre des hôtes et dates
+
+# NA ?
+na_count <- data %>% summarise_each(funs(sum(is.na(.))))
+# reviews_per_month : 10052 NA (près de 21% de valeur manquante)
+
+# \!/ Si number_of_reviews == 0 alors reviews_per_month == 0
+# \!/ Si number_of_reviews == 0 il n'y a pas non plus de "last_review"
+
+data <- mutate(data, reviews_per_month = ifelse(number_of_reviews==0, 
+                                                as.integer(0),
+                                                reviews_per_month))
+```
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# Plot histogramme (density)
+features_discrete <- names(select_if(data[,-c(1:4)],is.factor))
+for (i in features_discrete) { 
+  plot(data[i],
+       main = i,
+       col = "deepskyblue")
+}
+```
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+features_numeric <- names(select_if(data[,-c(1:4,7:8)],is.numeric))
+
+par(mfrow=c(1,2))
+for (i in features_numeric){
+  hist(log(data[,i]), main = paste("log of", i, xlab=""),col = "deepskyblue")
+  hist(data$i, main = i, xlab="", col = "darkseagreen1")
+}
+
+# Log "price" et reviews_per_month (?)
+```
+
+<!-- GRAPHICAL ANALYSIS (INDEX) --> 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+
+# Log price of New York city airbnb by neighborhood groups
+
+theme <- theme(plot.title = element_text(hjust = 0.5), 
+               plot.background = element_rect(fill = "#BFD5E3"))
+
+plot1 <- ggplot(data, mapping = aes(x = neighbourhood_group, 
+                                    y = log(price))) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
+               color="deepskyblue", fill="cyan", alpha=0.2) + 
+  ggtitle("New York airbnb by neighborhood groups") +
+  labs(x = "Neighbourhood groups", y = "Log of Price (in USD)") + 
+  theme
+
+# Log price of New York city airbnb by room types and neighborhood groups
+
+plot2 <- ggplot(data, mapping = aes(x = neighbourhood_group, 
+                                    y = log(price), fill = room_type)) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5) + 
+  ggtitle("New York airbnb by room types and neighborhood groups") +
+  scale_fill_discrete(name = "Room types") +
+  labs(x = "Neighbourhood groups", y = "Log of Price (in USD)") +
+  theme
+
+# Relation between Price (in log) and minimum numbers of nights
+
+plot3 <- ggplot(data[data$neighbourhood=="Manhattan",], 
+                mapping = aes(x = minimum_nights, 
+                                    y=log(price))) +
+  geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        plot.background = element_rect(fill = "#BFD5E3")) +
+  labs(x = "Minimum number of nights", y = "Log of Price (in USD)") 
+
+# Relation between Price (in log) and the amount of listing per host
+
+plot4 <- ggplot(data, mapping = aes(x = calculated_host_listings_count, 
+                                    y=log(price))) +
+  geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        plot.background = element_rect(fill = "#BFD5E3")) +
+  labs(x = "Amount of listing per host", y = "Log of Price (in USD)") 
+
+# Relation between Price (in log) and the number of reviews per month
+
+plot5 <- ggplot(data, mapping = aes(x = reviews_per_month, 
+                                    y=log(price))) +
+  geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        plot.background = element_rect(fill = "#BFD5E3")) +
+  labs(x = "Number of reviews per month", y = "Log of Price (in USD)") 
+
+ggplot_list <- Filter(function(x) is(x, "ggplot"), mget(ls()))
+for (plots in ggplot_list){
+  plot(plots)
+}
+```
+
+<!-- SPATIAL HEATMAP --> 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+
+# Mean price by neighborhood
+
+by_neighbourhood <- data %>% group_by(neighbourhood) %>% summarise(longitude = mean(longitude), latitude = mean(latitude), prix_moyen = mean(price))
+
+by_neighbourhood$Arrondissements = "x"
+
+for (i in by_neighbourhood$neighbourhood) {
+  for (j in data$neighbourhood) {
+    if (i == j) {
+      a = unique(as.character(data[data$neighbourhood==j,"neighbourhood_group"]))
+      by_neighbourhood[by_neighbourhood$neighbourhood==i,"Arrondissements"]<-a
+      }
+    }
+}
+
+by_neighbourhood$Arrondissements <- as.factor(by_neighbourhood$Arrondissements)
+
+height <- max(data$latitude) - min(data$latitude)
+width <- max(data$longitude) - min(data$longitude)
+borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
+             top     = max(data$latitude)  + 0.1 * height,
+             left    = min(data$longitude) - 0.1 * width,
+             right   = max(data$longitude) + 0.1 * width)
+
+map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
+
+ggmap(map) +
+  geom_point(by_neighbourhood, 
+             mapping = aes(x = longitude, y = latitude, 
+                           col = prix_moyen,
+                           shape = Arrondissements)) +
+  scale_colour_gradient(low = "blue", high = "red") + theme +
+  labs(x = "", y = "") + 
+  ggtitle("New York city airbnb heatmap") 
+```
+
