@@ -21,7 +21,7 @@ library(ggmap)
 ```
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-data <- read.csv("Data/data.csv", sep = ",")
+data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/data.csv", sep = ",")
 ```
 
 <!-- DATA EXPLORATION --> 
@@ -42,7 +42,7 @@ data <- mutate(data, reviews_per_month = ifelse(number_of_reviews==0,
                                                 reviews_per_month))
 ```
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
 # Plot histogramme (density)
 features_discrete <- names(select_if(data[,-c(1:4)],is.factor))
 for (i in features_discrete) { 
@@ -52,12 +52,12 @@ for (i in features_discrete) {
 }
 ```
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
 features_numeric <- names(select_if(data[,-c(1:4,7:8)],is.numeric))
 
 par(mfrow=c(1,2))
 for (i in features_numeric){
-  hist(log(data[,i]), main = paste("log of", i, xlab=""),col = "deepskyblue")
+  hist(log(data[,i]), main = paste("log of", i), xlab="",col = "deepskyblue")
   hist(data$i, main = i, xlab="", col = "darkseagreen1")
 }
 
@@ -66,15 +66,14 @@ for (i in features_numeric){
 
 <!-- GRAPHICAL ANALYSIS (INDEX) --> 
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
 
 # Log price of New York city airbnb by neighborhood groups
 
 theme <- theme(plot.title = element_text(hjust = 0.5), 
                plot.background = element_rect(fill = "#BFD5E3"))
 
-plot1 <- ggplot(data, mapping = aes(x = neighbourhood_group, 
-                                    y = log(price))) +
+ggplot(data, mapping = aes(x = neighbourhood_group, y = log(price))) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
                color="deepskyblue", fill="cyan", alpha=0.2) + 
   ggtitle("New York airbnb by neighborhood groups") +
@@ -83,8 +82,8 @@ plot1 <- ggplot(data, mapping = aes(x = neighbourhood_group,
 
 # Log price of New York city airbnb by room types and neighborhood groups
 
-plot2 <- ggplot(data, mapping = aes(x = neighbourhood_group, 
-                                    y = log(price), fill = room_type)) +
+ggplot(data, mapping = aes(x = neighbourhood_group, y = log(price), 
+                           fill = room_type)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5) + 
   ggtitle("New York airbnb by room types and neighborhood groups") +
   scale_fill_discrete(name = "Room types") +
@@ -93,47 +92,34 @@ plot2 <- ggplot(data, mapping = aes(x = neighbourhood_group,
 
 # Relation between Price (in log) and minimum numbers of nights
 
-plot3 <- ggplot(data[data$neighbourhood=="Manhattan",], 
-                mapping = aes(x = minimum_nights, 
-                                    y=log(price))) +
+ggplot(data, mapping = aes(x = minimum_nights, y=log(price))) +
   geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
-  theme(plot.title = element_text(hjust = 0.5), 
-        plot.background = element_rect(fill = "#BFD5E3")) +
-  labs(x = "Minimum number of nights", y = "Log of Price (in USD)") 
+  ggtitle("Relation between Price (in log) and minimum numbers of nights") +
+  labs(x = "Minimum number of nights", y = "Log of Price (in USD)") + theme
 
 # Relation between Price (in log) and the amount of listing per host
 
-plot4 <- ggplot(data, mapping = aes(x = calculated_host_listings_count, 
-                                    y=log(price))) +
+ggplot(data, mapping = aes(x = calculated_host_listings_count, y=log(price))) +
   geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
-  theme(plot.title = element_text(hjust = 0.5), 
-        plot.background = element_rect(fill = "#BFD5E3")) +
-  labs(x = "Amount of listing per host", y = "Log of Price (in USD)") 
+  ggtitle("Relation between Price (in log) and the amount of listing per host") +
+  labs(x = "Amount of listing per host", y = "Log of Price (in USD)") + theme
 
 # Relation between Price (in log) and the number of reviews per month
 
-plot5 <- ggplot(data, mapping = aes(x = reviews_per_month, 
-                                    y=log(price))) +
+ggplot(data, mapping = aes(x = reviews_per_month, y=log(price))) +
   geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
-  theme(plot.title = element_text(hjust = 0.5), 
-        plot.background = element_rect(fill = "#BFD5E3")) +
-  labs(x = "Number of reviews per month", y = "Log of Price (in USD)") 
+  ggtitle("Relation between Price (in log) and the number of reviews per month") +
+  labs(x = "Number of reviews per month", y = "Log of Price (in USD)") + theme
 
-ggplot_list <- Filter(function(x) is(x, "ggplot"), mget(ls()))
-for (plots in ggplot_list){
-  plot(plots)
-}
 ```
 
 <!-- SPATIAL HEATMAP --> 
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
 
 # Mean price by neighborhood
 
 by_neighbourhood <- data %>% group_by(neighbourhood) %>% summarise(longitude = mean(longitude), latitude = mean(latitude), prix_moyen = mean(price))
-
-by_neighbourhood$Arrondissements = "x"
 
 for (i in by_neighbourhood$neighbourhood) {
   for (j in data$neighbourhood) {
