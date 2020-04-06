@@ -57,11 +57,15 @@ features_numeric <- names(select_if(data[,-c(1:4,7:8)],is.numeric))
 
 par(mfrow=c(1,2))
 for (i in features_numeric){
-  hist(log(data[,i]), main = paste("log of", i), xlab="",col = "deepskyblue")
-  hist(data$i, main = i, xlab="", col = "darkseagreen1")
+  hist(log(data[,i]), main = paste("log of", i), xlab="",
+       col = "deepskyblue", probability = T)
+  lines(density(log(data[,i])), lwd = 2, col = "dodgerblue4")
+  hist(data$i, main = i, xlab="", col = "darkseagreen1", 
+       probability = T)
+  lines(density(data$i), lwd = 2, col = "forestgreen")
 }
 
-# Log "price" et reviews_per_month (?)
+# Log price et reviews_per_month (?)
 ```
 
 <!-- GRAPHICAL ANALYSIS (INDEX) --> 
@@ -106,20 +110,23 @@ ggplot(data, mapping = aes(x = calculated_host_listings_count, y=log(price))) +
 
 # Relation between Price (in log) and the number of reviews per month
 
-ggplot(data, mapping = aes(x = reviews_per_month, y=log(price))) +
+ggplot(data, mapping = aes(x = log(reviews_per_month), y=log(price))) +
   geom_point(size = 0.5, alpha = 0.2, color = "darkblue") +
-  ggtitle("Relation between Price (in log) and the number of reviews per month") +
-  labs(x = "Number of reviews per month", y = "Log of Price (in USD)") + theme
-
+  ggtitle("Relation between Price (in log) and \n the number of reviews per month (in log)") +
+  labs(x = "Number of reviews per month (in log)", y = "Price (in log)") + theme
 ```
 
 <!-- SPATIAL HEATMAP --> 
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
 
-# Mean price by neighborhood
-
-by_neighbourhood <- data %>% group_by(neighbourhood) %>% summarise(longitude = mean(longitude), latitude = mean(latitude), prix_moyen = mean(price))
+by_neighbourhood <- group_by(data, neighbourhood) %>% 
+  summarise(longitude = median(longitude), 
+            latitude = median(latitude), 
+            prix_moyen = mean(price),
+            nb_nuit_minimum_moyen = mean(minimum_nights),
+            nb_review_moyen = mean(number_of_reviews),
+            availability_moyen = mean(availability_365))
 
 for (i in by_neighbourhood$neighbourhood) {
   for (j in data$neighbourhood) {
@@ -141,6 +148,8 @@ borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
 
 map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
 
+## prix moyen par quartiers et arrondissement
+
 ggmap(map) +
   geom_point(by_neighbourhood, 
              mapping = aes(x = longitude, y = latitude, 
@@ -148,6 +157,35 @@ ggmap(map) +
                            shape = Arrondissements)) +
   scale_colour_gradient(low = "blue", high = "red") + theme +
   labs(x = "", y = "") + 
-  ggtitle("New York city airbnb heatmap") 
+  ggtitle("New York city airbnb mean price heatmap") 
+
+## availability_moyen par quartiers et arrondissement
+
+ggmap(map) +
+  geom_point(by_neighbourhood,
+             mapping = aes(x = longitude, y = latitude,
+                           col = availability_moyen,
+                           shape = Arrondissements)) +
+  scale_colour_gradient(low = "blue", high = "red") + theme +
+  labs(x = "", y = "") +
+  ggtitle("New York city airbnb availability_moyen heatmap")
 ```
 
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE}
+cross <- group_by(data, neighbourhood_group) %>% 
+  summarise(longitude = median(longitude), 
+            latitude = median(latitude), 
+            availability_moyen = mean(availability_365),
+            availability_median = median(availability_365),
+            prix_moyen = mean(price),
+            prix_median = median(price))
+
+ggmap(map) +
+  geom_point(cross,
+             mapping = aes(x = longitude, y = latitude,
+                           col = prix_moyen,
+                           size = availability_moyen,
+                           shape=neighbourhood_group)) +
+  scale_colour_gradient(low = "blue", high = "red") + theme +
+  labs(x = "", y = "") 
+```
