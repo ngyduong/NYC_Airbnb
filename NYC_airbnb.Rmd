@@ -21,10 +21,10 @@ library(ggmap)
 ```
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/data.csv", sep = ",")
+data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master 2/S2/NYC_Airbnb/Data/data.csv", sep = ",")
 ```
 
-<!-- DATA EXPLORATION --> 
+<!-- DATA EXPLORATION V2--> 
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 summary(data[,-c(1:4,13)]) 
