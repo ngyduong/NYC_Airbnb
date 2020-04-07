@@ -1,0 +1,62 @@
+---
+title: "Apprentissage Statistique"
+subtitle: "New York city Airbnb"
+author: "Duong Nguyen & Julien Le Mauff"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=F, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Import Packages
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+library(caret)
+library(dplyr)
+library(psych)
+library(caret)
+library(ggplot2)
+library(ggmap)
+library(lubridate)
+```
+
+# Import data
+
+## Listings
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+listing <- read.csv("/Users/ngyduong/Desktop/Data/listings.csv", sep = ",")
+
+listings_keep <- c("id", "last_review","host_id", "host_is_superhost",
+                   "host_identity_verified", "neighbourhood_group_cleansed",
+                   "neighbourhood_cleansed", "latitude","longitude", "property_type",
+                   "accommodates", "bedrooms", "beds", "bed_type", "cleaning_fee",
+                   "minimum_nights", "availability_365", "number_of_reviews",
+                   "review_scores_rating","cancellation_policy","security_deposit")
+
+data <- listing[listing$state=="NY", listings_keep]
+```
+
+## Calendars
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+calendar <- read.csv("/Users/ngyduong/Desktop/Data/calendar.csv", sep = ",")
+
+glimpse2 <- glimpse %>% 
+  group_by(listing_id) %>%
+  summarise(mean_price = mean(price)))
+
+
+glimpse2 <- group_by(glimpse, listing_id) %>% 
+  summarise(mean_price = mean(price))
+```
+
+# Data manipulations
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+na_count <- data %>% summarise_each(funs(sum(is.na(.))))
+```
+
