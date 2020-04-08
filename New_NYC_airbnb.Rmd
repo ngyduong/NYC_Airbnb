@@ -60,7 +60,11 @@ library(gridExtra)
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # data <- merge(calendar_grouped, listing, by = "listing_id")
-# 
+```
+
+## Removing $ sign on price and cleaning fees
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # data$price = as.numeric(gsub("[\\$,]", "", data$price))
 # data$cleaning_fee = as.numeric(gsub("[\\$,]", "", data$cleaning_fee))
 ```
