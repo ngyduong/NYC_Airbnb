@@ -112,7 +112,7 @@ library(stringr)
 #                          median(bedrooms,na.rm = T),bedrooms)) %>%
 #   ungroup()
 # 
-# # ===== ===== Bed ===== ===== 
+# # ===== ===== Beds ===== ===== 
 # 
 # histogram(data$beds)
 # mean(data$beds, na.rm = T)
@@ -168,13 +168,37 @@ library(stringr)
 #                          median(review_scores_rating,na.rm=T),
 #                          review_scores_rating)) %>%
 #   ungroup()
-# 
+#
 # # There is still 202 missing values so we will just replace them with the
-# # overall score median 
-# 
-# data[is.na(data$review_scores_rating), 
-#      "review_scores_rating"] <- median(data$review_scores_rating, 
+# # overall score median
+#
+# data[is.na(data$review_scores_rating),
+#      "review_scores_rating"] <- median(data$review_scores_rating,
 #                                        na.rm = T)
+#
+# ===== ===== Host is superhost ===== =====
+# 
+# # There is only 5 missing values (blank) out of more than 50 000
+# # Therefore we will just replace them with the most common value (f)
+# 
+# most_common_superhost <- 
+#   tail(names(sort(table(data$host_is_superhost))), 1)
+# 
+# data <- data %>%
+#   mutate_if(is.factor, 
+#             funs(factor(replace(., .=="", most_common_superhost))))
+# 
+# # ===== ===== Host identity verified ===== =====
+# 
+# # There is only 5 missing values (blank) out of more than 50 000
+# # Therefore we will just replace them with the most common value (f)
+# 
+# most_common_verified <- 
+#   tail(names(sort(table(data$host_identity_verified))), 1)
+# 
+# data <- data %>%
+#   mutate_if(is.factor, 
+#             funs(factor(replace(., .=="", most_common_verified))))
 ```
 
 ## Export the cleaned database 
@@ -191,7 +215,21 @@ library(stringr)
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", 
                  sep = ",")
+
+data$host_id <- as.factor(data$host_id)
 ```
 
 ## Data visualisation
 
+### Density of discrete variables
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+features_discrete <- names(select_if(data[,-c(1,4:5)],is.factor))
+# Without host_id, last_review and listing_id
+
+for (i in features_discrete) { 
+  plot(data[i],
+       main = i,
+       col = "deepskyblue")
+}
+```
