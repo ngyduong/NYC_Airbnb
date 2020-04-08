@@ -22,6 +22,8 @@ library(ggplot2)
 library(ggmap)
 library(lubridate)
 library(stringr)
+library(forcats)
+library(gridExtra)
 ```
 
 # Import data
@@ -83,20 +85,26 @@ library(stringr)
 # 
 # # ===== ===== Price ===== ===== 
 # 
-# # We replace the 8 missing values of adjusted price by the price 
-# # (not adjusted) since there is only a slight difference 
+# # We replace the 8 missing values of adjusted price by the price
+# # (not adjusted) since there is only a slight difference
 # # between the 2 variables
 # 
 # data[is.na(data$adjusted_price),
 #      "adjusted_price"] <- data[is.na(data$adjusted_price),"price"]
 # 
-# # ===== ===== Bedrooms ===== ===== 
+# # We then drop the variable "price"
+# data <- data[ , !(names(data) %in% c("price"))]
+# 
+# # We change the name adjusted_price by price for more convenience
+# names(data)[names(data) == "adjusted_price"] <- "price"
+# 
+# # ===== ===== Bedrooms ===== =====
 # 
 # histogram(data$bedrooms)
 # mean(data$bedrooms, na.rm = T)
 # median(data$bedrooms, na.rm = T)
 # 
-# # Given the distribution, we can replace the 76 missing values 
+# # Given the distribution, we can replace the 76 missing values
 # # of bedrooms (the number of bedrooms) by the median grouped 
 # # by property type, number of accomodates and bed types. 
 # 
@@ -217,19 +225,53 @@ data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/New
                  sep = ",")
 
 data$host_id <- as.factor(data$host_id)
+data$bedrooms <- as.factor(data$bedrooms)
+data$beds <- as.factor(data$beds)
+data$accommodates <- as.factor(data$accommodates)
 ```
 
 ## Data visualisation
 
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+theme <- theme(plot.title = element_text(hjust = 0.5), 
+               plot.background = element_rect(fill = "#BFD5E3"))
+```
+
 ### Density of discrete variables
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-features_discrete <- names(select_if(data[,-c(1,4:5)],is.factor))
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+features_discrete <- names(select_if(data[,-c(1,3:4)],is.factor))
 # Without host_id, last_review and listing_id
 
-for (i in features_discrete) { 
-  plot(data[i],
-       main = i,
-       col = "deepskyblue")
+for (i in features_discrete) {
+  plot <- ggplot(mapping = aes_string(x = fct_infreq(data[,i]), 
+                                      fill = data[,i])) +
+    geom_bar(width = 1, colour = "black", show.legend = F) + 
+    theme + labs(x = "", y = "Fréquence") + ggtitle(i)
+  print(plot)
+}
+```
+
+### Density and log of continuous variables 
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+features_numeric <- names(select_if(data[,-c(1,9:10)],is.numeric))
+# Without listing_id, latitude and longitude
+
+for (i in features_numeric){
+  plot <- ggplot(mapping = aes(x = data[,i])) +
+    geom_histogram(colour="black", fill="dodgerblue3",
+                   aes(y = ..density..)) + 
+    theme + labs(x = "", y = "Density") + ggtitle(i) +
+    geom_density(fill = "cyan", colour = "cyan", 
+                 alpha = 0.5, lwd=0.5, linetype = "dashed") 
+  log_plot <- ggplot(mapping = aes(x = log(data[,i]))) +
+    geom_histogram(colour="black", fill="forestgreen",
+                   aes(y= ..density..)) +
+    theme + labs(x = "", y = "Density") +
+    ggtitle(paste("log of",i)) +
+    geom_density(fill = "olivedrab2", colour = "olivedrab2", 
+                 alpha = 0.5, lwd=0.5, linetype = "dashed") 
+  grid.arrange(plot, log_plot, ncol=2)
 }
 ```
