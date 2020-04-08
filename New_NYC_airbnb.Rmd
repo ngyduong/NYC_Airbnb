@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=F, warning=FALSE, message=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = T)
 ```
 
 # Import Packages
@@ -21,42 +21,177 @@ library(caret)
 library(ggplot2)
 library(ggmap)
 library(lubridate)
+library(stringr)
 ```
 
 # Import data
 
-## Listings
+## Listing
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-listing <- read.csv("/Users/ngyduong/Desktop/Data/listings.csv", sep = ",")
-
-listings_keep <- c("id", "last_review","host_id", "host_is_superhost",
-                   "host_identity_verified", "neighbourhood_group_cleansed",
-                   "neighbourhood_cleansed", "latitude","longitude", "property_type",
-                   "accommodates", "bedrooms", "beds", "bed_type", "cleaning_fee",
-                   "minimum_nights", "availability_365", "number_of_reviews",
-                   "review_scores_rating","cancellation_policy","security_deposit")
-
-data <- listing[listing$state=="NY", listings_keep]
+# listing <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/listings.csv", sep = ",")
+# 
+# listings_keep <- c("id", "price","last_review","host_id",
+#                    "host_is_superhost", "host_identity_verified",
+#                    "neighbourhood_group_cleansed", "neighbourhood_cleansed",
+#                    "latitude","longitude", "property_type", "accommodates",
+#                    "bedrooms", "beds", "bed_type", "cleaning_fee",
+#                    "minimum_nights", "availability_365", "number_of_reviews",
+#                    "review_scores_rating","cancellation_policy")
+# 
+# listing <- listing[listing$state=="NY", listings_keep]
+# names(listing)[names(listing) == 'id'] <- 'listing_id'
 ```
 
-## Calendars
+## Calendar
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-calendar <- read.csv("/Users/ngyduong/Desktop/Data/calendar.csv", sep = ",")
-
-glimpse2 <- glimpse %>% 
-  group_by(listing_id) %>%
-  summarise(mean_price = mean(price)))
-
-
-glimpse2 <- group_by(glimpse, listing_id) %>% 
-  summarise(mean_price = mean(price))
+# calendar <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/calendar.csv", sep = ",")
+# 
+# calendar$adjusted_price = as.numeric(gsub("[\\$,]", "", calendar$adjusted_price))
+# 
+# calendar_grouped <- group_by(calendar, listing_id) %>%
+#   summarise(adjusted_price = mean(adjusted_price))
 ```
 
-# Data manipulations
+## Merge Calendar and Listing
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-na_count <- data %>% summarise_each(funs(sum(is.na(.))))
+# data <- merge(calendar_grouped, listing, by = "listing_id")
+# 
+# data$price = as.numeric(gsub("[\\$,]", "", data$price))
+# data$cleaning_fee = as.numeric(gsub("[\\$,]", "", data$cleaning_fee))
 ```
+
+## Export the compiled data base
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/compiled_data.csv",
+#           row.names = FALSE)
+```
+
+# Import compiled data
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/compiled_data.csv", sep = ",")
+```
+
+## Data manipulations / Cleaning the data
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# na_count <- t(data %>% summarise_each(funs(sum(is.na(.)))))
+# 
+# # ===== ===== Price ===== ===== 
+# 
+# # We replace the 8 missing values of adjusted price by the price 
+# # (not adjusted) since there is only a slight difference 
+# # between the 2 variables
+# 
+# data[is.na(data$adjusted_price),
+#      "adjusted_price"] <- data[is.na(data$adjusted_price),"price"]
+# 
+# # ===== ===== Bedrooms ===== ===== 
+# 
+# histogram(data$bedrooms)
+# mean(data$bedrooms, na.rm = T)
+# median(data$bedrooms, na.rm = T)
+# 
+# # Given the distribution, we can replace the 76 missing values 
+# # of bedrooms (the number of bedrooms) by the median grouped 
+# # by property type, number of accomodates and bed types. 
+# 
+# # We use the median because we want an integer and not a float 
+# # (numbers with commas)
+# 
+# data <- data %>%
+#   group_by(
+#     property_type,
+#     accommodates,
+#     bed_type) %>%
+#   mutate(bedrooms=ifelse(is.na(bedrooms),
+#                          median(bedrooms,na.rm = T),bedrooms)) %>%
+#   ungroup()
+# 
+# # ===== ===== Bed ===== ===== 
+# 
+# histogram(data$beds)
+# mean(data$beds, na.rm = T)
+# median(data$beds, na.rm = T)
+# 
+# # Given the distribution, we can replace the 479 missing values 
+# # of beds (the number of beds) by the median grouped 
+# # by property type, number of accomodates and bed types. 
+# 
+# # We use the median because we want an integer and not a float 
+# # (numbers with commas)
+# 
+# data <- data %>%
+#   group_by(
+#     property_type,
+#     accommodates,
+#     bed_type) %>% 
+#   mutate(beds=ifelse(is.na(beds),
+#                          median(beds,na.rm=T),beds)) %>%
+#   ungroup()
+# 
+# # There is still 2 missing values for beds, we will replace the 
+# # last 2 missing values by the overall median of beds
+# 
+# data[is.na(data$beds), "beds"] <- median(data$beds, na.rm = T)
+# 
+# # ===== ===== Cleaning fee ===== ===== 
+# 
+# # A cleaning fee is a one-time fee charged by hosts to cover the cost of
+# # cleaning their holiday rental when guests depart. Not all hosts charge
+# # this fee. Some incorporate it into their nightly rate. 
+# 
+# # Therefore it is safe to assume that when there is no value for this
+# # variable it simply means that the host didn't charge
+# 
+# data[is.na(data$cleaning_fee), "cleaning_fee"] <- 0
+# 
+# # ===== ===== Review scores rating ===== ===== 
+# 
+# histogram(data$review_scores_rating)
+# 
+# # Given that the distribution is skewed on the right, we will use the
+# # median to approximate the missing values grouped by neighbours, 
+# # property types, type of beds and if the host is a superhost.
+# 
+# data <- data %>%
+#   group_by(
+#     neighbourhood_cleansed,
+#     bed_type,
+#     property_type,
+#     host_is_superhost) %>% 
+#   mutate(review_scores_rating=ifelse(is.na(review_scores_rating),
+#                          median(review_scores_rating,na.rm=T),
+#                          review_scores_rating)) %>%
+#   ungroup()
+# 
+# # There is still 202 missing values so we will just replace them with the
+# # overall score median 
+# 
+# data[is.na(data$review_scores_rating), 
+#      "review_scores_rating"] <- median(data$review_scores_rating, 
+#                                        na.rm = T)
+```
+
+## Export the cleaned database 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv",
+#           row.names = FALSE)
+```
+
+# Data analysis / Data visualisation
+
+## Import the clean database
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", 
+                 sep = ",")
+```
+
+## Data visualisation
 
