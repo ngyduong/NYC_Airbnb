@@ -84,6 +84,8 @@ library(gridExtra)
 
 ## Data manipulations / Cleaning the data
 
+### Dealing with missing values
+
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # na_count <- t(data %>% summarise_each(funs(sum(is.na(.)))))
 # 
@@ -213,6 +215,47 @@ library(gridExtra)
 #             funs(factor(replace(., .=="", most_common_verified))))
 ```
 
+### Dealing with categorical variables with too many levels
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+# # # ===== ===== Type de logement ===== =====
+# 
+# # We groups all 40 subgroups of logement types into 5 big groups
+# 
+# Appartment <- c("Aparthotel","Serviced apartment", "Loft",
+#                 "Condominium", "Apartment")
+# 
+# House <- c("Barn", "Timeshare", "Dome house", "Lighthouse",
+#            "Casa particular (Cuba)", "Houseboat", "Villa",
+#            "Treehouse", "Earth house", "Cottage", "Tiny house",
+#            "Townhouse", "House")
+# 
+# Shared_room <- c("Dorm", "Hostel", "Guesthouse")
+# 
+# Private_room <- c("Farm stay", "Bed and breakfast", "Resort", "Hotel",
+#                    "Boutique hotel", "Guest suite", "In-law")
+# 
+# Other <- c("Train", "Bus", "island", "Boat", "Other", "Cave", "Island",
+#            "Camper/RV", "Bungalow", "Cabin", "Yurt", "Castle", "Tent")
+# 
+# data$property_type <- as.character(data$property_type)
+# 
+# data <- 
+#   mutate(data, 
+#          property_type = ifelse(property_type %in% Appartment,
+#                                 "Appartment", property_type),
+#          property_type = ifelse(property_type %in% House,
+#                                 "House", property_type),
+#          property_type = ifelse(property_type %in% Shared_room,
+#                                 "Shared Room", property_type),
+#          property_type = ifelse(property_type %in% Private_room,
+#                                 "Private Room", property_type),
+#          property_type = ifelse(property_type %in% Other,
+#                                 "Others", property_type))
+# 
+# data$property_type <- as.factor(data$property_type)
+```
+
 ## Export the cleaned database 
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
@@ -239,6 +282,7 @@ data$accommodates <- as.factor(data$accommodates)
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 theme <- theme(plot.title = element_text(hjust = 0.5), 
                plot.background = element_rect(fill = "#BFD5E3"))
+tag_source <- "Source: Inside Airbnb"
 ```
 
 ### Density of discrete variables
@@ -248,10 +292,11 @@ features_discrete <- names(select_if(data[,-c(1,3:4)],is.factor))
 # Without host_id, last_review and listing_id
 
 for (i in features_discrete) {
-  plot <- ggplot(mapping = aes_string(x = fct_infreq(data[,i]), 
-                                      fill = data[,i])) +
+  plot <-ggplot(mapping = aes_string(x = fct_infreq(data[,i]), 
+                                     fill = data[,i])) +
     geom_bar(width = 1, colour = "black", show.legend = F) + 
-    theme + labs(x = "", y = "Fréquence") + ggtitle(i)
+    theme + labs(x = "", y = "Fréquence", caption = tag_source) +
+    ggtitle(i)
   print(plot)
 }
 ```
@@ -263,19 +308,48 @@ features_numeric <- names(select_if(data[,-c(1,9:10)],is.numeric))
 # Without listing_id, latitude and longitude
 
 for (i in features_numeric){
+  
   plot <- ggplot(mapping = aes(x = data[,i])) +
     geom_histogram(colour="black", fill="dodgerblue3",
-                   aes(y = ..density..)) + 
-    theme + labs(x = "", y = "Density") + ggtitle(i) +
+                   aes(y = ..density..)) + theme + ggtitle(i) +
+    labs(x = "", y = "Density", caption = tag_source) + 
     geom_density(fill = "cyan", colour = "cyan", 
                  alpha = 0.5, lwd=0.5, linetype = "dashed") 
+  
   log_plot <- ggplot(mapping = aes(x = log(data[,i]))) +
     geom_histogram(colour="black", fill="forestgreen",
-                   aes(y= ..density..)) +
-    theme + labs(x = "", y = "Density") +
+                   aes(y= ..density..)) + theme + 
+    labs(x = "", y = "Density", caption = tag_source) + 
     ggtitle(paste("log of",i)) +
     geom_density(fill = "olivedrab2", colour = "olivedrab2", 
                  alpha = 0.5, lwd=0.5, linetype = "dashed") 
+  
   grid.arrange(plot, log_plot, ncol=2)
 }
+```
+
+### Boxplot 
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+# # ===== ===== Prix par arrondissement ===== =====
+
+ggplot(data, mapping = aes(x = neighbourhood_group_cleansed, 
+                           y = log(price))) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
+               color="deepskyblue", fill="cyan", alpha=0.2) + 
+  ggtitle("Prix des airbnb par nuit en moyenne par arondissement") +
+  labs(x = "Arrondissements", y = "Prix par nuit en moyenne (en log)",
+       caption = tag_source) + theme
+
+# # ===== ===== Prix par arrondissement et type de logement ===== =====
+
+ggplot(data, mapping = aes(x = neighbourhood_group_cleansed, 
+                           y = log(price), 
+                           fill = property_type)) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5) + 
+  ggtitle("Prix des airbnb par nuit en moyenne par arondissement \n 
+          et par type de logement") +
+  scale_fill_discrete(name = "Type de logement") + theme +
+  labs(x = "Arrondissement", y = "Prix par nuit en moyenne (en log)",
+       caption = tag_source) 
 ```
