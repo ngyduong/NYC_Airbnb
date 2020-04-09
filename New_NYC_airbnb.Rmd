@@ -89,7 +89,7 @@ library(gridExtra)
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # na_count <- t(data %>% summarise_each(funs(sum(is.na(.)))))
 # 
-# # ===== ===== Price ===== ===== 
+# # ===== ===== Price ===== =====
 # 
 # # We replace the 8 missing values of adjusted price by the price
 # # (not adjusted) since there is only a slight difference
@@ -111,10 +111,10 @@ library(gridExtra)
 # median(data$bedrooms, na.rm = T)
 # 
 # # Given the distribution, we can replace the 76 missing values
-# # of bedrooms (the number of bedrooms) by the median grouped 
-# # by property type, number of accomodates and bed types. 
+# # of bedrooms (the number of bedrooms) by the median grouped
+# # by property type, number of accomodates and bed types.
 # 
-# # We use the median because we want an integer and not a float 
+# # We use the median because we want an integer and not a float
 # # (numbers with commas)
 # 
 # data <- data %>%
@@ -126,50 +126,50 @@ library(gridExtra)
 #                          median(bedrooms,na.rm = T),bedrooms)) %>%
 #   ungroup()
 # 
-# # ===== ===== Beds ===== ===== 
+# # ===== ===== Beds ===== =====
 # 
 # histogram(data$beds)
 # mean(data$beds, na.rm = T)
 # median(data$beds, na.rm = T)
 # 
-# # Given the distribution, we can replace the 479 missing values 
-# # of beds (the number of beds) by the median grouped 
-# # by property type, number of accomodates and bed types. 
+# # Given the distribution, we can replace the 479 missing values
+# # of beds (the number of beds) by the median grouped
+# # by property type, number of accomodates and bed types.
 # 
-# # We use the median because we want an integer and not a float 
+# # We use the median because we want an integer and not a float
 # # (numbers with commas)
 # 
 # data <- data %>%
 #   group_by(
 #     property_type,
 #     accommodates,
-#     bed_type) %>% 
+#     bed_type) %>%
 #   mutate(beds=ifelse(is.na(beds),
 #                          median(beds,na.rm=T),beds)) %>%
 #   ungroup()
 # 
-# # There is still 2 missing values for beds, we will replace the 
+# # There is still 2 missing values for beds, we will replace the
 # # last 2 missing values by the overall median of beds
 # 
 # data[is.na(data$beds), "beds"] <- median(data$beds, na.rm = T)
 # 
-# # ===== ===== Cleaning fee ===== ===== 
+# # ===== ===== Cleaning fee ===== =====
 # 
 # # A cleaning fee is a one-time fee charged by hosts to cover the cost of
 # # cleaning their holiday rental when guests depart. Not all hosts charge
-# # this fee. Some incorporate it into their nightly rate. 
+# # this fee. Some incorporate it into their nightly rate.
 # 
 # # Therefore it is safe to assume that when there is no value for this
 # # variable it simply means that the host didn't charge
 # 
 # data[is.na(data$cleaning_fee), "cleaning_fee"] <- 0
 # 
-# # ===== ===== Review scores rating ===== ===== 
+# # ===== ===== Review scores rating ===== =====
 # 
 # histogram(data$review_scores_rating)
 # 
 # # Given that the distribution is skewed on the right, we will use the
-# # median to approximate the missing values grouped by neighbours, 
+# # median to approximate the missing values grouped by neighbours,
 # # property types, type of beds and if the host is a superhost.
 # 
 # data <- data %>%
@@ -177,29 +177,29 @@ library(gridExtra)
 #     neighbourhood_cleansed,
 #     bed_type,
 #     property_type,
-#     host_is_superhost) %>% 
+#     host_is_superhost) %>%
 #   mutate(review_scores_rating=ifelse(is.na(review_scores_rating),
 #                          median(review_scores_rating,na.rm=T),
 #                          review_scores_rating)) %>%
 #   ungroup()
-#
+# 
 # # There is still 202 missing values so we will just replace them with the
 # # overall score median
-#
+# 
 # data[is.na(data$review_scores_rating),
 #      "review_scores_rating"] <- median(data$review_scores_rating,
 #                                        na.rm = T)
-#
-# ===== ===== Host is superhost ===== =====
+# 
+# # ===== ===== Host is superhost ===== =====
 # 
 # # There is only 5 missing values (blank) out of more than 50 000
 # # Therefore we will just replace them with the most common value (f)
 # 
-# most_common_superhost <- 
+# most_common_superhost <-
 #   tail(names(sort(table(data$host_is_superhost))), 1)
 # 
 # data <- data %>%
-#   mutate_if(is.factor, 
+#   mutate_if(is.factor,
 #             funs(factor(replace(., .=="", most_common_superhost))))
 # 
 # # ===== ===== Host identity verified ===== =====
@@ -207,11 +207,11 @@ library(gridExtra)
 # # There is only 5 missing values (blank) out of more than 50 000
 # # Therefore we will just replace them with the most common value (f)
 # 
-# most_common_verified <- 
+# most_common_verified <-
 #   tail(names(sort(table(data$host_identity_verified))), 1)
 # 
 # data <- data %>%
-#   mutate_if(is.factor, 
+#   mutate_if(is.factor,
 #             funs(factor(replace(., .=="", most_common_verified))))
 ```
 
@@ -228,20 +228,20 @@ library(gridExtra)
 # House <- c("Barn", "Timeshare", "Dome house", "Lighthouse",
 #            "Casa particular (Cuba)", "Houseboat", "Villa",
 #            "Treehouse", "Earth house", "Cottage", "Tiny house",
-#            "Townhouse", "House")
+#            "Townhouse", "House", "Bungalow", "Cabin")
 # 
 # Shared_room <- c("Dorm", "Hostel", "Guesthouse")
 # 
 # Private_room <- c("Farm stay", "Bed and breakfast", "Resort", "Hotel",
 #                    "Boutique hotel", "Guest suite", "In-law")
 # 
-# Other <- c("Train", "Bus", "island", "Boat", "Other", "Cave", "Island",
-#            "Camper/RV", "Bungalow", "Cabin", "Yurt", "Castle", "Tent")
+# Other <- c("Train", "Bus", "Boat", "Other", "Cave", "Island",
+#            "Camper/RV", "Yurt", "Castle", "Tent")
 # 
 # data$property_type <- as.character(data$property_type)
 # 
-# data <- 
-#   mutate(data, 
+# data <-
+#   mutate(data,
 #          property_type = ifelse(property_type %in% Appartment,
 #                                 "Appartment", property_type),
 #          property_type = ifelse(property_type %in% House,
@@ -268,7 +268,7 @@ library(gridExtra)
 ## Import the clean database
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", 
+data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv",
                  sep = ",")
 
 data$host_id <- as.factor(data$host_id)
@@ -333,23 +333,106 @@ for (i in features_numeric){
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 # # ===== ===== Prix par arrondissement ===== =====
 
-ggplot(data, mapping = aes(x = neighbourhood_group_cleansed, 
-                           y = log(price))) +
+ggplot(data, aes(x = neighbourhood_group_cleansed, y = log(price))) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
                color="deepskyblue", fill="cyan", alpha=0.2) + 
-  ggtitle("Prix des airbnb par nuit en moyenne par arondissement") +
+  ggtitle("Prix des airbnb par nuit en moyenne (en log) par arondissement") +
   labs(x = "Arrondissements", y = "Prix par nuit en moyenne (en log)",
        caption = tag_source) + theme
 
 # # ===== ===== Prix par arrondissement et type de logement ===== =====
 
-ggplot(data, mapping = aes(x = neighbourhood_group_cleansed, 
-                           y = log(price), 
-                           fill = property_type)) +
+ggplot(data, aes(x = neighbourhood_group_cleansed, y = log(price), 
+                 fill = property_type)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5) + 
-  ggtitle("Prix des airbnb par nuit en moyenne par arondissement \n 
-          et par type de logement") +
+  ggtitle("Prix des airbnb par nuit en moyenne (en log) 
+          par arondissement et par type de logement") +
   scale_fill_discrete(name = "Type de logement") + theme +
   labs(x = "Arrondissement", y = "Prix par nuit en moyenne (en log)",
        caption = tag_source) 
+
+# # ===== ===== Répartition des logements par arrondissement ===== =====
+
+ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
+  geom_bar(width = 1, colour = "black", show.legend = T) +
+  ggtitle("Répartition des logements par arrondissement") +
+  scale_fill_discrete(name = "Type de logement") + theme + 
+  labs(x = "Arrondissement", y = "Fréquence", caption = tag_source) 
+```
+
+### Spatial Heatmap
+
+#### Par Quartier
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+by_neighbourhood <- group_by(data, neighbourhood_cleansed) %>% 
+  summarise(longitude = median(longitude), 
+            latitude = median(latitude), 
+            prix_median = median(price),
+            prix_moyen = mean(price),
+            scores_moyen = mean(review_scores_rating))
+
+for (i in by_neighbourhood$neighbourhood_cleansed) {
+  for (j in data$neighbourhood_cleansed) {
+    if (i == j) {
+      a <- unique(as.character(data[data$neighbourhood_cleansed==j,
+                                   "neighbourhood_group_cleansed"]))
+      by_neighbourhood[by_neighbourhood$neighbourhood_cleansed==i,
+                       "Arrondissements"] <- a
+    }
+  }
+}
+
+by_neighbourhood$Arrondissements <- 
+  as.factor(by_neighbourhood$Arrondissements)
+
+height <- max(data$latitude) - min(data$latitude)
+width <- max(data$longitude) - min(data$longitude)
+borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
+             top     = max(data$latitude)  + 0.1 * height,
+             left    = min(data$longitude) - 0.1 * width,
+             right   = max(data$longitude) + 0.1 * width)
+
+map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
+
+# # ===== ===== Prix moyen par quartiers ===== =====
+ggmap(map) +
+  geom_point(by_neighbourhood, 
+             mapping = aes(x = longitude, y = latitude, 
+                           col = prix_moyen,
+                           shape = Arrondissements)) +
+  scale_colour_gradient(low = "blue", high = "red") + theme +
+  labs(x = "", y = "", caption = tag_source) + 
+  ggtitle("Prix moyen par quartier") 
+
+# # ===== ===== Score median par quartiers ===== =====
+ggmap(map) +
+  geom_point(by_neighbourhood, 
+             mapping = aes(x = longitude, y = latitude, 
+                           col = scores_moyen,
+                           shape = Arrondissements)) +
+  scale_colour_gradient(low = "blue", high = "red") + theme +
+  labs(x = "", y = "", caption = tag_source) + 
+  ggtitle("Score median par quartier") 
+```
+
+#### Par Arrondissement
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+by_borough <- group_by(data, neighbourhood_group_cleansed) %>% 
+  summarise(longitude = median(longitude), 
+            latitude = median(latitude),
+            prix_moyen = mean(price),
+            prix_median = median(price),
+            scores_moyen = mean(review_scores_rating))
+
+# # ===== ===== Prix moyen par arrondissements ===== =====
+
+ggmap(map) +
+  geom_point(by_borough, mapping = aes(x = longitude, y = latitude,
+                                       col = prix_moyen, 
+                                       shape = neighbourhood_group_cleansed)) +
+  scale_colour_gradient(low = "blue", high = "red") + 
+  theme + labs(x = "", y = "", caption = tag_source) +
+  ggtitle("Prix moyen par arrondissements")
 ```
