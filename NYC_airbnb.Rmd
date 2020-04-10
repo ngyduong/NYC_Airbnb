@@ -270,11 +270,6 @@ library(gridExtra)
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv",
                  sep = ",")
-
-data$host_id <- as.factor(data$host_id)
-data$bedrooms <- as.factor(data$bedrooms)
-data$beds <- as.factor(data$beds)
-data$accommodates <- as.factor(data$accommodates)
 ```
 
 ## Data visualisation
@@ -288,6 +283,10 @@ tag_source <- "Source: Inside Airbnb"
 ### Density of discrete variables
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+data$bedrooms <- as.factor(data$bedrooms)
+data$beds <- as.factor(data$beds)
+data$accommodates <- as.factor(data$accommodates)
+
 features_discrete <- names(select_if(data[,-c(1,3:4)],is.factor))
 # Without host_id, last_review and listing_id
 
@@ -362,7 +361,7 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
 
 ### Spatial Heatmap
 
-#### Par Quartier
+#### Evolution des prix par quartier
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 by_neighbourhood <- group_by(data, neighbourhood_cleansed) %>% 
@@ -402,7 +401,7 @@ ggmap(map) +
                            col = prix_moyen,
                            shape = Arrondissements)) +
   scale_colour_gradient(low = "blue", high = "red") + theme +
-  labs(x = "", y = "", caption = tag_source) + 
+  labs(x = "", y = "", caption = tag_source, col = "Prix moyen") + 
   ggtitle("Prix moyen par quartier") 
 
 # # ===== ===== Score median par quartiers ===== =====
@@ -412,11 +411,11 @@ ggmap(map) +
                            col = scores_moyen,
                            shape = Arrondissements)) +
   scale_colour_gradient(low = "blue", high = "red") + theme +
-  labs(x = "", y = "", caption = tag_source) + 
+  labs(x = "", y = "", caption = tag_source, col = "Score moyen") + 
   ggtitle("Score median par quartier") 
 ```
 
-#### Par Arrondissement
+#### Evolution des prix par Arrondissement
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 by_borough <- group_by(data, neighbourhood_group_cleansed) %>% 
@@ -424,15 +423,26 @@ by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
             latitude = median(latitude),
             prix_moyen = mean(price),
             prix_median = median(price),
-            scores_moyen = mean(review_scores_rating))
+            scores_moyen = mean(review_scores_rating),
+            disponibilité_moyen = mean(availability_365))
 
 # # ===== ===== Prix moyen par arrondissements ===== =====
 
 ggmap(map) +
-  geom_point(by_borough, mapping = aes(x = longitude, y = latitude,
+  geom_point(by_borough, shape = 18,
+             mapping = aes(x = longitude, y = latitude,
                                        col = prix_moyen, 
-                                       shape = neighbourhood_group_cleansed)) +
+                                       size = disponibilité_moyen)) +
   scale_colour_gradient(low = "blue", high = "red") + 
-  theme + labs(x = "", y = "", caption = tag_source) +
-  ggtitle("Prix moyen par arrondissements")
+  theme + labs(x = "", y = "", caption = tag_source, 
+               size = "Disponibilité annuel moyen",
+               col = "Prix moyen") +
+  ggtitle("Prix moyen (en log) et disponibilité 
+          par arrondissements") +
+  geom_label(by_borough, 
+             mapping = aes(longitude, latitude, 
+                           label = neighbourhood_group_cleansed),
+             size = 1.5, fontface = "bold", 
+             nudge_x = 0.015, nudge_y = -0.03)
 ```
+
