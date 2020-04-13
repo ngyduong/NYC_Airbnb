@@ -145,8 +145,8 @@ data[is.na(data$host_is_superhost),
 data$rating <- as.integer(data$review_scores_rating) 
 
 data <- data %>% 
-  mutate (rating =  ifelse(rating == 2, 100, rating),
-          rating =  ifelse(rating >= 19, rating+42, rating))
+  mutate (rating =  ifelse(rating >= 19, rating+42, rating),
+          rating =  ifelse(rating == 2, 100, rating))
 
 # Given that the distribution is skewed on the right, we will use the
 # median to approximate the missing values grouped by neighbours,
@@ -165,6 +165,7 @@ data[is.na(data$rating),
                                        na.rm = T)
 
 data <- data[,-c(16)]
+names(data)[names(data) == "rating"] <- "review_scores_rating"
 
 # ===== ===== Cancellation policy ===== =====
 
