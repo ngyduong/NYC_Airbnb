@@ -588,30 +588,30 @@ ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
 ## Polynomial plots
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-RMSE <- rep(0,5)
-degree <- 1:5
-
 set.seed(777)
+
+# We choose the number of maximum polynomial degree
+max_degree <- 6
 
 list <- c("bedrooms","minimum_nights","accommodates",
           "cleaning_fee","availability_365","beds")
 
 for (l in list){
-  for (d in degree) {
+  RMSE <- rep(0,max_degree)
+  for (d in 1:max_degree) {
     PolyRegressor <- train(as.formula(bquote(log_price ~ poly(.(as.name(l)), .(d)))),
                            data = data_train,
                            method = "lm",
                            trControl = K10_CV)
-    RMSE[i]<- PolyRegressor$results$RMSE
-    tem_data = data.frame(degree, RMSE)
-
-    plot <- ggplot(aes(x = degree,y = RMSE),data = tem_data) +
-      geom_line(col="red") + theme_models +
-      labs(x = "Polynomial Degrees", y = "RMSE",
-           caption = "The model has been fit using 62942 samples & 1 predictor
-           and the dependant variable was the log of price") +
-      ggtitle(paste(l,"RMSE by polynomial degrees"))
+    RMSE[d]<- PolyRegressor$results$RMSE
   }
+  tem_data = data.frame(1:max_degree, RMSE)
+  plot <- ggplot(aes(x = 1:max_degree,y = RMSE), data = tem_data) +
+    geom_line(col="red") + theme_models +
+    labs(x = "Polynomial Degrees", y = "RMSE",
+         caption = "The model has been fit using 62942 samples & 1 predictor
+         and the dependant variable was the log of price") +
+    ggtitle(paste(l,"RMSE by polynomial degrees"))
   print(plot)
 }
 ```
