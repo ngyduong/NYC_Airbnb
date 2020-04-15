@@ -187,7 +187,7 @@ data[is.na(data$review_scores_rating), "review_scores_rating"] <-
 data <- data[complete.cases(data$cancellation_policy),]
 ```
 
-## Dealing with categorical variables with too many levels
+## Dealing with categorical variables 
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # # ===== ===== Type de logement ===== =====
@@ -220,30 +220,52 @@ data <-
          property_type = ifelse(property_type %in% House,
                                 "House", property_type),
          property_type = ifelse(property_type %in% Shared_room,
-                                "Shared Room", property_type),
+                                "SharedRoom", property_type),
          property_type = ifelse(property_type %in% Private_room,
-                                "Private Room", property_type),
+                                "PrivateRoom", property_type),
          property_type = ifelse(property_type %in% Other,
                                 "Others", property_type))
 
 # # ===== ===== Host is superhost ===== =====
 
 # We change from "t" to "Truee and "f" to False
-data <- mutate(data, host_is_superhost = ifelse(host_is_superhost=="t",
-                                                "True", "False"))
+data <- mutate(data, 
+               host_is_superhost = ifelse(host_is_superhost=="t", 
+                                          "True", "False"))
 
+# # ===== ===== Bed Types ===== =====
+
+data$bed_type <- as.character(data$bed_type)
+
+# We change from "Pull-out Sofa" to "PullOut_Sofa" and "Real Bed" to "Real Bed"
+data <- mutate(data, 
+               bed_type = ifelse(bed_type=="Pull-out Sofa", 
+                                 "PullOut_Sofa", bed_type),
+               bed_type = ifelse(bed_type=="Real Bed",
+                                 "RealBed", bed_type))
+
+# # ===== ===== Borough (neighbourhood_group_cleansed) ===== =====
+
+data$neighbourhood_group_cleansed <- as.character(data$neighbourhood_group_cleansed)
+
+# We change from "Pull-out Sofa" to "PullOut_Sofa" and "Real Bed" to "Real Bed"
+data <- mutate(data, 
+               neighbourhood_group_cleansed = 
+                 ifelse(neighbourhood_group_cleansed=="Staten Island", 
+                        "StatenIsland", neighbourhood_group_cleansed))
 ```
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", row.names = FALSE)
+write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", row.names = FALSE) 
 ```
 
 # Data analysis / Data visualisation
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
-data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv",
-                 sep = ",")
+# Nguyen Duong
+data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 
+# Julien Le Mauff
 data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master2/
                  S2/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 ```
@@ -333,8 +355,7 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
 ### Correlation matrix
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-res <- cor(corr_data[,features_numeric])
-corrplot(res, method = "pie", type = "lower")
+corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 ```
 
 ### Spatial Heatmap
@@ -410,12 +431,10 @@ by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 # # ===== ===== Prix moyen par arrondissements ===== =====
-
 ggmap(map) +
   geom_point(by_borough, shape = 18,
              mapping = aes(x = longitude, y = latitude,
-                                       col = prix_moyen,
-                                       size = disponibilité_moyen)) +
+                           col = prix_moyen, size = disponibilité_moyen)) +
   scale_colour_gradient(low = "blue", high = "red") +
   theme + labs(x = "", y = "", caption = tag_source,
                size = "Disponibilité annuel moyen",
@@ -429,14 +448,30 @@ ggmap(map) +
              nudge_x = 0.015, nudge_y = -0.03)
 ```
 
-# Models 
+# Linear Models 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+theme_models <- theme(plot.title = element_text(hjust = 0.5),
+               plot.background = element_rect(fill = "#BFD5E3"),
+               legend.position = "none")
+
+tag_source_models <- "The model has been fit using 62942 samples & 30 predictor
+and the dependant variable was the log of price"
+```
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-# # ===== ===== Create a subset of the data to use in prediction ===== =====
+# # ===== Create a subset of the data to use in prediction ===== =====
 
 data_model <- data %>% select(-c("id", "neighbourhood_cleansed", 
                                  "latitude", "longitude", "price"))
 data_model$log_price <- log(data$price)
+
+# # ===== Create dummy variables =====
+
+dummies <- dummyVars(log_price~., data_model, sep = "_")
+new_set <- as.data.frame(predict(dummies, newdata = data_model))
+data_model <- cbind(new_set,data_model$log_price)
+colnames(data_model)[which(names(data_model) == "data_model$log_price")] <- "log_price"
 
 # # ===== ===== Train / Test split ===== =====
 set.seed(777)
@@ -446,7 +481,7 @@ trainIndex <- createDataPartition(data_model$log_price,
                                   list = FALSE, 
                                   times = 1)
 
-data_train <- data_model[ trainIndex,]
+data_train <- data_model[trainIndex,]
 data_test  <- data_model[-trainIndex,]
 
 # # ===== ===== Setting up the validation methods ===== =====
@@ -463,18 +498,120 @@ ols_fit <- train(log_price ~ .,
                  method = "lm" , 
                  trControl = K10_CV)
 
+summary(ols_fit)
+
 ols_pred <- predict(ols_fit, data_test)
 
 postResample(pred = ols_pred, obs = data_test$log_price)
 ```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+ols_varImp <- data.frame(variables = row.names(varImp(ols_fit)$importance),
+                         varImp(ols_fit)$importance)
+
+ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("OLS: Variables d'importances") 
+```
+
+## Shrinkage models
 
 ## Ridge regression
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 set.seed(777)
 
+ridge_fit <- train(log_price ~ ., 
+                   data = data_train, 
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 0, 
+                                          lambda = seq(0, 1, 0.01)),
+                   preProcess = c("scale","center"),
+                   trControl = K10_CV)
 
+ridge_fit$bestTune
+
+ridge_pred <- predict(ridge_fit, data_test)
+
+postResample(pred = ridge_pred, obs = data_test$log_price)
 ```
 
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+ridge_varImp <- data.frame(variables = row.names(varImp(ridge_fit)$importance),
+                           varImp(ridge_fit)$importance)
 
+ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Ridge regression: Variables d'importances") 
+```
 
+## Lasso regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+set.seed(777)
+
+lasso_fit <- train(log_price ~ ., 
+                   data = data_train, 
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 1, 
+                                          lambda = seq(0, 1, 0.01)),
+                   preProcess = c("scale","center"),
+                   trControl = K10_CV)
+
+lasso_fit$bestTune
+
+lasso_pred <- predict(lasso_fit, data_test)
+
+postResample(pred = lasso_pred, obs = data_test$log_price)
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+lasso_varImp <- data.frame(variables = row.names(varImp(lasso_fit)$importance),
+                           varImp(lasso_fit)$importance)
+
+ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Lasso regression: Variables d'importances") 
+```
+
+# Polynomial Models 
+
+## Polynomial plots
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+RMSE <- rep(0,5)
+degree <- 1:5
+
+set.seed(777)
+
+list <- c("bedrooms","minimum_nights","accommodates",
+          "cleaning_fee","availability_365","beds")
+
+for (l in list){
+  for (d in degree) {
+    PolyRegressor <- train(as.formula(bquote(log_price ~ poly(.(as.name(l)), .(d)))),
+                           data = data_train,
+                           method = "lm",
+                           trControl = K10_CV)
+    RMSE[i]<- PolyRegressor$results$RMSE
+    tem_data = data.frame(degree, RMSE)
+
+    plot <- ggplot(aes(x = degree,y = RMSE),data = tem_data) +
+      geom_line(col="red") + theme_models +
+      labs(x = "Polynomial Degrees", y = "RMSE",
+           caption = "The model has been fit using 62942 samples & 1 predictor
+           and the dependant variable was the log of price") +
+      ggtitle(paste(l,"RMSE by polynomial degrees"))
+  }
+  print(plot)
+}
+```
