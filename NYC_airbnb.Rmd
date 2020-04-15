@@ -1,6 +1,7 @@
 ---
 title: "Apprentissage Statistique"
 subtitle: "New York city Airbnb"
+subsubtitle: "RStudio version 1.2.5001 & R version 3.6.2 (2019-12-12)"
 author: "Duong Nguyen & Julien Le Mauff"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -26,9 +27,10 @@ library(stringr)
 library(forcats)
 library(gridExtra)
 library(vroom)
+library(corrplot)
 ```
 
-# Listings data
+# Import Raw data
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # Get the file names of every csv file with the pattern "listing_"
@@ -71,15 +73,13 @@ listings <- listings[-id_remove, ]
 write.csv(listings, "Data/data_compiled.csv", row.names = FALSE)
 ```
 
-# Import compiled data
+# Data manipulations / Cleaning the data
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/data_compiled.csv", sep = ",")
 ```
 
-## Data manipulations / Cleaning the data
-
-### Dealing with missing values
+## Dealing with missing values
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # ===== ===== NA count ===== =====
@@ -187,7 +187,7 @@ data[is.na(data$review_scores_rating), "review_scores_rating"] <-
 data <- data[complete.cases(data$cancellation_policy),]
 ```
 
-### Dealing with categorical variables with too many levels
+## Dealing with categorical variables with too many levels
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # # ===== ===== Type de logement ===== =====
@@ -226,18 +226,19 @@ data <-
          property_type = ifelse(property_type %in% Other,
                                 "Others", property_type))
 
-data$property_type <- as.factor(data$property_type)
-```
+# # ===== ===== Host is superhost ===== =====
 
-## Export the cleaned database 
+# We change from "t" to "Truee and "f" to False
+data <- mutate(data, host_is_superhost = ifelse(host_is_superhost=="t",
+                                                "True", "False"))
+
+```
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", row.names = FALSE)
 ```
 
 # Data analysis / Data visualisation
-
-## Import the clean database
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv",
@@ -327,6 +328,13 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
   ggtitle("Répartition des logements par arrondissement") +
   scale_fill_discrete(name = "Type de logement") + theme +
   labs(x = "Arrondissement", y = "Fréquence", caption = tag_source)
+```
+
+### Correlation matrix
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+res <- cor(corr_data[,features_numeric])
+corrplot(res, method = "pie", type = "lower")
 ```
 
 ### Spatial Heatmap
@@ -420,4 +428,53 @@ ggmap(map) +
              size = 1.5, fontface = "bold",
              nudge_x = 0.015, nudge_y = -0.03)
 ```
+
+# Models 
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+# # ===== ===== Create a subset of the data to use in prediction ===== =====
+
+data_model <- data %>% select(-c("id", "neighbourhood_cleansed", 
+                                 "latitude", "longitude", "price"))
+data_model$log_price <- log(data$price)
+
+# # ===== ===== Train / Test split ===== =====
+set.seed(777)
+
+trainIndex <- createDataPartition(data_model$log_price, 
+                                  p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+
+data_train <- data_model[ trainIndex,]
+data_test  <- data_model[-trainIndex,]
+
+# # ===== ===== Setting up the validation methods ===== =====
+K10_CV <- trainControl(method = "cv", number = 10)
+```
+
+## Ordinary Least Square model 
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+set.seed(777)
+
+ols_fit <- train(log_price ~ ., 
+                 data = data_train, 
+                 method = "lm" , 
+                 trControl = K10_CV)
+
+ols_pred <- predict(ols_fit, data_test)
+
+postResample(pred = ols_pred, obs = data_test$log_price)
+```
+
+## Ridge regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+set.seed(777)
+
+
+```
+
+
 
