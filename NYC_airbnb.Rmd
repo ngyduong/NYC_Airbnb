@@ -197,10 +197,9 @@ data <- data[complete.cases(data$cancellation_policy),]
 Appartment <- c("Aparthotel","Serviced apartment", "Loft",
                 "Condominium", "Apartment")
 
-House <- c("Barn", "Timeshare", "Dome house", "Lighthouse",
-           "Casa particular (Cuba)", "Houseboat", "Villa",
+House <- c("Barn", "Timeshare", "Dome house", "Lighthouse", "Houseboat",
            "Treehouse", "Earth house", "Cottage", "Tiny house",
-           "Townhouse", "House", "Bungalow", "Cabin")
+           "Townhouse", "House", "Bungalow", "Cabin","Villa")
 
 Shared_room <- c("Dorm", "Hostel", "Guesthouse", "Timeshare")
 
@@ -209,7 +208,7 @@ Private_room <- c("Farm stay", "Bed and breakfast", "Resort", "Hotel",
 
 Other <- c("Train", "Bus", "Boat", "Other", "Cave", "Island",
            "Camper/RV", "Yurt", "Castle", "Tent", "Nature lodge",
-           "Pension (South Korea)")
+           "Pension (South Korea)","Casa particular (Cuba)")
 
 data$property_type <- as.character(data$property_type)
 
@@ -226,23 +225,49 @@ data <-
          property_type = ifelse(property_type %in% Other,
                                 "Others", property_type))
 
-# # ===== ===== Host is superhost ===== =====
+data <- data[!data$property_type=="Others",]
+
+# # ===== ===== Cancellation policy ===== =====
 
 # We change from "t" to "Truee and "f" to False
 data <- mutate(data, 
                host_is_superhost = ifelse(host_is_superhost=="t", 
                                           "True", "False"))
 
+# # ===== ===== Host is superhost ===== =====
+
+# We groups all 4 subgroups of strict types into only group
+
+data$cancellation_policy <- as.character(data$cancellation_policy)
+
+# We change from "t" to "Truee and "f" to False
+data <- mutate(data, 
+               cancellation_policy = 
+                 ifelse(cancellation_policy=="strict_14_with_grace_period",
+                        "strict", cancellation_policy),
+               cancellation_policy =
+                 ifelse(cancellation_policy=="super_strict_30", 
+                        "strict", cancellation_policy),
+               cancellation_policy =
+                 ifelse(cancellation_policy=="super_strict_60", 
+                        "strict", cancellation_policy))
+
 # # ===== ===== Bed Types ===== =====
 
-data$bed_type <- as.character(data$bed_type)
+# data$bed_type <- as.character(data$bed_type)
+# 
+# # We change from "Pull-out Sofa" to "PullOut_Sofa" and "Real Bed" to "Real Bed"
+# data <- mutate(data, 
+#                bed_type = ifelse(bed_type=="Pull-out Sofa", 
+#                                  "PullOut_Sofa", bed_type),
+#                bed_type = ifelse(bed_type=="Real Bed",
+#                                  "RealBed", bed_type))
 
-# We change from "Pull-out Sofa" to "PullOut_Sofa" and "Real Bed" to "Real Bed"
-data <- mutate(data, 
-               bed_type = ifelse(bed_type=="Pull-out Sofa", 
-                                 "PullOut_Sofa", bed_type),
-               bed_type = ifelse(bed_type=="Real Bed",
-                                 "RealBed", bed_type))
+# After more carefull decision we have decided to remove bed_type 
+# Because out of more than 78000, only a handfull of 1014 observations
+# have their bedtype value different from "Real Bed"
+
+data <- data[,-which(names(data) == "bed_type")]
 
 # # ===== ===== Borough (neighbourhood_group_cleansed) ===== =====
 
@@ -278,7 +303,7 @@ theme <- theme(plot.title = element_text(hjust = 0.5),
 tag_source <- "Source: Inside Airbnb"
 ```
 
-### Density of discrete variables
+### Frequence of discrete variables
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 features_discrete <- names(select_if(data[,-c(1)],is.factor))
@@ -455,7 +480,7 @@ theme_models <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"),
                legend.position = "none")
 
-tag_source_models <- "The model has been fit using 62942 samples & 30 predictor
+tag_source_models <- "The model has been fit using 62762 samples & 18 predictor (with constant)
 and the dependant variable was the log of price"
 ```
 
@@ -485,7 +510,8 @@ data_train <- data_model[trainIndex,]
 data_test  <- data_model[-trainIndex,]
 
 # # ===== ===== Setting up the validation methods ===== =====
-K10_CV <- trainControl(method = "cv", number = 10)
+# 5 Fold Cross Validation
+K5_CV <- trainControl(method = "cv", number = 5)
 ```
 
 ## Ordinary Least Square model 
@@ -493,10 +519,14 @@ K10_CV <- trainControl(method = "cv", number = 10)
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 set.seed(777)
 
-ols_fit <- train(log_price ~ ., 
+ols_fit <- train(log_price ~ . - 
+                   host_is_superhost_False -
+                   property_type_SharedRoom -
+                   neighbourhood_group_cleansed_Queens -
+                   cancellation_policy_moderate, 
                  data = data_train, 
                  method = "lm" , 
-                 trControl = K10_CV)
+                 trControl = K5_CV)
 
 summary(ols_fit)
 
@@ -524,13 +554,17 @@ ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 set.seed(777)
 
-ridge_fit <- train(log_price ~ ., 
+ridge_fit <- train(log_price ~ . - 
+                     host_is_superhost_False -
+                     property_type_SharedRoom -
+                     neighbourhood_group_cleansed_Queens -
+                     cancellation_policy_moderate, 
                    data = data_train, 
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 0, 
                                           lambda = seq(0, 1, 0.01)),
                    preProcess = c("scale","center"),
-                   trControl = K10_CV)
+                   trControl = K5_CV)
 
 ridge_fit$bestTune
 
@@ -556,13 +590,16 @@ ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 set.seed(777)
 
-lasso_fit <- train(log_price ~ ., 
+lasso_fit <- train(log_price ~ . - host_is_superhost_False -
+                     property_type_SharedRoom -
+                     neighbourhood_group_cleansed_Queens -
+                     cancellation_policy_moderate,  
                    data = data_train, 
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 1, 
                                           lambda = seq(0, 1, 0.01)),
                    preProcess = c("scale","center"),
-                   trControl = K10_CV)
+                   trControl = K5_CV)
 
 lasso_fit$bestTune
 
@@ -591,7 +628,7 @@ ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
 set.seed(777)
 
 # We choose the number of maximum polynomial degree
-max_degree <- 6
+max_degree <- 5
 
 list <- c("bedrooms","minimum_nights","accommodates",
           "cleaning_fee","availability_365","beds")
@@ -602,7 +639,7 @@ for (l in list){
     PolyRegressor <- train(as.formula(bquote(log_price ~ poly(.(as.name(l)), .(d)))),
                            data = data_train,
                            method = "lm",
-                           trControl = K10_CV)
+                           trControl = K5_CV)
     RMSE[d]<- PolyRegressor$results$RMSE
   }
   tem_data = data.frame(1:max_degree, RMSE)
@@ -614,4 +651,46 @@ for (l in list){
     ggtitle(paste(l,"RMSE by polynomial degrees"))
   print(plot)
 }
+```
+
+# Polynomial Regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+set.seed(777)
+
+poly_fit <- train(log_price ~ poly(accommodates,2) + 
+                    poly(availability_365,3) +
+                    poly(bedrooms,4) + . - 
+                    host_is_superhost_False -
+                    property_type_SharedRoom -
+                    neighbourhood_group_cleansed_Queens -
+                    cancellation_policy_moderate -
+                    accommodates -
+                    availability_365 -
+                    bedrooms,
+                  data = data_train, 
+                  method = "lm" , 
+                  trControl = K5_CV)
+
+summary(poly_fit)
+
+poly_pred <- predict(poly_fit, data_test)
+
+postResample(pred = poly_pred, obs = data_test$log_price)
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+poly_varImp <- data.frame(variables = row.names(varImp(poly_fit)$importance),
+                          varImp(poly_fit)$importance)
+
+ggplot(data = poly_varImp, mapping = aes(x=reorder(variables, Overall),
+                                         y=Overall,
+                                         fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + 
+  labs(x = "", y = "", 
+       caption = "The model has been fit using 62762 samples & 23 predictor (with constant) and the dependant variable was the log of price.
+       The variable bedrooms was taken to the 4th polynomial degree, the variable availability_365 was taken to the 
+       3rd polynomial degree and the variable bedrooms was taken to the 2nd polynomial degree.") +
+  ggtitle("Polynomial regression: Variables d'importances") 
 ```
