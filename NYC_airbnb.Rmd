@@ -283,7 +283,7 @@ data <- mutate(data,
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", row.names = FALSE) 
 ```
-
+ 
 # Data analysis / Data visualisation
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
