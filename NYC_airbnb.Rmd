@@ -25,8 +25,10 @@ library(ggmap)
 library(lubridate)
 library(stringr)
 library(forcats)
+library(foreach)
 library(gridExtra)
 library(vroom)
+library(e1071)
 library(corrplot)
 ```
 
@@ -288,11 +290,10 @@ write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewY
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # Nguyen Duong
-data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
+# data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 
 # Julien Le Mauff
-data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master2/
-                 S2/NYC_Airbnb/Data/clean_data.csv", sep = ",")
+data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master 2/S2/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 ```
 
 ## Data visualisation
@@ -389,7 +390,7 @@ corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=F}
 by_neighbourhood <- group_by(data, neighbourhood_cleansed) %>%
-  summarise(longitude = median(longitude),
+  summarize(longitude = median(longitude),
             latitude = median(latitude),
             prix_median = median(price),
             prix_moyen = mean(price),
@@ -446,7 +447,7 @@ ggmap(map) +
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=F}
 by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
-  summarise(longitude = median(longitude),
+  summarize(longitude = median(longitude),
             latitude = median(latitude),
             prix_moyen = mean(price),
             prix_median = median(price),
@@ -653,7 +654,7 @@ for (l in list){
 }
 ```
 
-# Polynomial Regression
+## Polynomial Regression
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
 set.seed(777)
@@ -694,3 +695,100 @@ ggplot(data = poly_varImp, mapping = aes(x=reorder(variables, Overall),
        3rd polynomial degree and the variable bedrooms was taken to the 2nd polynomial degree.") +
   ggtitle("Polynomial regression: Variables d'importances") 
 ```
+
+##KNN
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+# # control variables
+# fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 5)
+# set.seed(777)
+# 
+# knn.fit <- train(log_price ~., data = data_train, 
+#                  method = "knn", 
+#                  trControl = fitControl,
+#                  tuneGrid = expand.grid(k = seq(10,100,by=5)))
+# 
+# results <- knn.fit$results
+# kopt <- results[order(results$RMSE),]$k[1]
+# kopt
+```
+
+## Boosting 
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+# control variables
+seed <- 777
+m <- 100
+# rcvSeeds <- setSeeds(method = "repeatedcv", 
+#                      numbers = 5, repeats = 3, 
+#                      tunes = m, seed = seed)
+
+rcvCtrl <- trainControl(method = "repeatedcv", 
+                        number = 5, repeats = 3)
+
+Grid <- expand.grid(n.trees = c(100, 125, 150, 175), 
+                    interaction.depth = c(2, 4, 6, 8),
+                    shrinkage = c(.1, .2, .4, .6), 
+                    n.minobsinnode= c(4, 6, 8, 10))
+
+set.seed(777)
+gbm_fit  <-  train(log_price~., data = data_train,  
+                  method = "gbm", 
+                  bag.fraction = 1, verbose= FALSE,
+                  trControl = rcvCtrl, tuneGrid = Grid)
+plot(gbm_fit)              
+gbm_fit$bestTune
+
+gbm_pred <- predict(gbm_fit, data_test)
+
+#RMSE for BoostingTrees
+postResample(pred = gbm_pred, obs = data_test$log_price)
+```
+
+getModelInfo()$gbm_fit$parameters
+
+## Random forest
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+trctrl <- trainControl(method="repeatedcv", number = 5, repeats = 3,
+                       classProbs = TRUE)
+                       
+set.seed(777)
+rf_fit  <-  train(log_price~., data = data_train,
+                   method = "rf",
+                   trControl = trctrl)
+
+plot(rf_fit)
+rf_fit$bestTune
+
+rf_pred <- predict(rf_fit, newdata = data_model)
+
+#RMSE for Random Forest
+postResample(pred = rf_pred, obs = data_test$log_price)
+```
+
+## SVM
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+#linear kernel
+svm_fit = svm(log_price ~., data = data_train , type="nu-regression",
+              kernel="linear", shrinking = T )
+
+svm_pred = predict(svm_fit, newdata = data_test)
+
+#RMSE for linear SVM
+mean((svm_pred - data_test$log_price))
+```
+### 0.5
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+#polynomial kernel
+svm_fit2 = svm(log_price ~., data =data_train , type="nu-regression",
+         kernel="polynomial", shrinking = T )
+
+svm_pred2 = predict(svm_fit2, newdata = data_test)
+
+#RMSE for polynomial SVM
+mean((svm_pred2 -data_test$log_price))
+```
+### 0.56
