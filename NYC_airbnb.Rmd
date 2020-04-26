@@ -292,10 +292,19 @@ write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewY
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
 # Nguyen Duong
-# data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
+data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 
 # Julien Le Mauff
-data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master 2/S2/NYC_Airbnb/Data/clean_data.csv", sep = ",")
+# data <- read.csv("/Users/lemauffjulien/Documents/Documents/Master 2/S2/NYC_Airbnb/Data/clean_data.csv", sep = ",")
+
+# As Factor
+Asfactor = c("host_is_superhost", "neighbourhood_group_cleansed",
+             "neighbourhood_cleansed", "property_type",
+             "cancellation_policy")
+
+for (i in Asfactor){
+  data[,i] <- as.factor(data[,i])
+}
 ```
 
 ## Data visualisation
@@ -317,7 +326,7 @@ for (i in features_discrete) {
                                      fill = data[,i])) +
     geom_bar(width = 1, colour = "black", show.legend = F) +
     theme + labs(x = "", y = "Fréquence", caption = tag_source) +
-    ggtitle(i)
+    ggtitle(str_replace_all(toupper(i), c("_" = " ", "CLEANSED" = "")))
   print(plot)
 }
 ```
@@ -332,7 +341,8 @@ for (i in features_numeric){
 
   plot <- ggplot(mapping = aes(x = data[,i])) +
     geom_histogram(colour="black", fill="dodgerblue3",
-                   aes(y = ..density..)) + theme + ggtitle(i) +
+                   aes(y = ..density..)) + theme + 
+    ggtitle(str_replace_all(toupper(i), c("_" = " "))) +
     labs(x = "", y = "Density", caption = tag_source) +
     geom_density(fill = "cyan", colour = "cyan",
                  alpha = 0.5, lwd=0.5, linetype = "dashed")
@@ -341,7 +351,8 @@ for (i in features_numeric){
     geom_histogram(colour="black", fill="forestgreen",
                    aes(y= ..density..)) + theme +
     labs(x = "", y = "Density", caption = tag_source) +
-    ggtitle(paste("log of",i)) +
+    ggtitle(str_replace_all(paste("Log of",toupper(i)), 
+                            c("_" = " "))) +
     geom_density(fill = "olivedrab2", colour = "olivedrab2",
                  alpha = 0.5, lwd=0.5, linetype = "dashed")
 
@@ -680,6 +691,8 @@ summary(poly_fit)
 poly_pred <- predict(poly_fit, data_test)
 
 postResample(pred = poly_pred, obs = data_test$log_price)
+
+# RMSE 0.5016245
 ```
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
