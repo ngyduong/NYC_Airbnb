@@ -32,6 +32,7 @@ library(xgboost)
 library(e1071)
 library(kernlab)
 library(corrplot)
+library(doMC)
 ```
 
 # Import Raw data
@@ -317,7 +318,7 @@ tag_source <- "Source: Inside Airbnb"
 
 ### Frequence of discrete variables
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 features_discrete <- names(select_if(data[,-c(1)],is.factor))
 # Without id
 
@@ -333,7 +334,7 @@ for (i in features_discrete) {
 
 ### Density and log of continuous variables
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 features_numeric <- names(select_if(data[,-c(1,6:7)],is.numeric))
 # Without id, latitude and longitude
 
@@ -362,7 +363,7 @@ for (i in features_numeric){
 
 ### Boxplot 
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 # # ===== ===== Prix par arrondissement ===== =====
 ggplot(data, aes(x = neighbourhood_group_cleansed, y = log(price))) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
@@ -393,7 +394,7 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
 
 ### Correlation matrix
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 ```
 
@@ -401,7 +402,7 @@ corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 
 #### Evolution des prix par quartier
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 by_neighbourhood <- group_by(data, neighbourhood_cleansed) %>%
   summarize(longitude = median(longitude),
             latitude = median(latitude),
@@ -433,7 +434,7 @@ borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
 map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 # # ===== ===== Prix moyen par quartiers ===== =====
 ggmap(map) +
   geom_point(by_neighbourhood,
@@ -458,7 +459,7 @@ ggmap(map) +
 
 #### Evolution des prix par Arrondissement
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
   summarize(longitude = median(longitude),
             latitude = median(latitude),
@@ -468,7 +469,7 @@ by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
             disponibilité_moyen = mean(availability_365))
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 # # ===== ===== Prix moyen par arrondissements ===== =====
 ggmap(map) +
   geom_point(by_borough, shape = 18,
@@ -489,7 +490,7 @@ ggmap(map) +
 
 # Linear Models 
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 theme_models <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"),
                legend.position = "none")
@@ -498,7 +499,7 @@ tag_source_models <- "The model has been fit using 62762 samples & 18 predictor 
 and the dependant variable was the log of price"
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 # # ===== Create a subset of the data to use in prediction ===== =====
 
 data_model <- data %>% select(-c("id", "neighbourhood_cleansed", 
@@ -530,7 +531,7 @@ K5_CV <- trainControl(method = "cv", number = 5)
 
 ## Ordinary Least Square model 
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 ols_fit <- train(log_price ~ . - 
@@ -549,7 +550,7 @@ ols_pred <- predict(ols_fit, data_test)
 postResample(pred = ols_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 ols_varImp <- data.frame(variables = row.names(varImp(ols_fit)$importance),
                          varImp(ols_fit)$importance)
 
@@ -565,7 +566,7 @@ ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Ridge regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 ridge_fit <- train(log_price ~ . - 
@@ -587,7 +588,7 @@ ridge_pred <- predict(ridge_fit, data_test)
 postResample(pred = ridge_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 ridge_varImp <- data.frame(variables = row.names(varImp(ridge_fit)$importance),
                            varImp(ridge_fit)$importance)
 
@@ -601,7 +602,7 @@ ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Lasso regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 lasso_fit <- train(log_price ~ . - host_is_superhost_False -
@@ -622,7 +623,7 @@ lasso_pred <- predict(lasso_fit, data_test)
 postResample(pred = lasso_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 lasso_varImp <- data.frame(variables = row.names(varImp(lasso_fit)$importance),
                            varImp(lasso_fit)$importance)
 
@@ -638,7 +639,7 @@ ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Polynomial plots
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 # We choose the number of maximum polynomial degree
@@ -669,7 +670,7 @@ for (l in list){
 
 ## Polynomial Regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 poly_fit <- train(log_price ~ poly(accommodates,2) + 
@@ -695,7 +696,7 @@ postResample(pred = poly_pred, obs = data_test$log_price)
 # RMSE 0.5016245
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 poly_varImp <- data.frame(variables = row.names(varImp(poly_fit)$importance),
                           varImp(poly_fit)$importance)
 
@@ -711,46 +712,39 @@ ggplot(data = poly_varImp, mapping = aes(x=reorder(variables, Overall),
   ggtitle("Polynomial regression: Variables d'importances") 
 ```
 
-##KNN
+# Non Parametric models
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-# control variables
-fitControl <- trainControl(method = "cv", number = 5)
-set.seed(777)
+## PreProcess / Standardize
 
-knn_fit <- train(log_price ~., data = data_train,
-                 method = "knn",
-                 preProc = c("center","scale"),
-                 trControl = fitControl,
-                 tuneGrid = expand.grid(k = seq(8,22,by=2)))
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+#Train
+Preproc_train <- preProcess(data_train[,c("accommodates","beds","bedrooms",
+                                          "cleaning_fee","minimum_nights",
+                                          "availability_365",
+                                          "review_scores_rating")],
+                            method=c('center','scale'))
 
-results <- knn_fit$results
-kopt <- results[order(results$RMSE),]$k[1]
-kopt
-plot(knn_fit)
+data_train_standardized <- predict(Preproc_train,data_train)
 
-knn_pred <- predict(knn_fit, data_test)
+#Test
+Preproc_test <- preProcess(data_test[,c("accommodates","beds","bedrooms",
+                                        "cleaning_fee","minimum_nights",
+                                        "availability_365",
+                                        "review_scores_rating")],
+                            method=c('center','scale'))
 
-#RMSE for KNN
-postResample(pred = knn_pred, obs = data_test$log_price)
+data_test_standardized <- predict(Preproc_test, data_test)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-knn_varImp <- data.frame(variables = row.names(varImp(knn_fit)$importance),
-                          varImp(knn_fit)$importance)
+## Allow for Parallel computing
 
-ggplot(data = knn_varImp, mapping = aes(x=reorder(variables, Overall),
-                                         y=Overall,
-                                         fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme_models + 
-  labs(x = "", y = "") +
-  ggtitle("K nearest neighhbor: Variables d'importances") 
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+registerDoMC(cores = 3)
 ```
 
-## Boosting 
+## Set seeds
 
-```{r Setseeds, include=FALSE,echo=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 # function to set up random seeds
 setSeeds <- function(method = "cv", numbers = 1, repeats = 1, tunes = NULL, seed = 1237) {
   #B is the number of resamples and integer vector of M (numbers + tune length if any)
@@ -769,98 +763,156 @@ setSeeds <- function(method = "cv", numbers = 1, repeats = 1, tunes = NULL, seed
   # return seeds
   seeds
 }
-```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-# control variables
-seed <- 777
-m <- 100
 rcvSeeds <- setSeeds(method = "repeatedcv", 
                       numbers = 5, repeats = 5, 
-                      tunes = m, seed = seed)
+                      tunes = 100, seed = 777)
 
-rcvCtrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, 
-                        savePredictions = TRUE, seeds = rcvSeeds)
+K5_CV_seed <- trainControl(method = "cv", number = 5, classProbs = TRUE, 
+                           savePredictions = TRUE, seeds = rcvSeeds)
+```
 
-Grid <- expand.grid(n.trees = 150:200, 
+## KNN
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+# grid <- expand.grid(k = seq(15,20,1))
+grid <- expand.grid(k = 19)
+
+knn_fit <- train(log_price ~., 
+                 data = data_train_standardized,
+                 method = "knn",
+                 trControl = K5_CV_seed,
+                 tuneGrid = grid,
+                 allowParallel = TRUE)
+
+# plot(knn_fit)
+# knn_fit$bestTune
+
+knn_pred <- predict(knn_fit, data_test_standardized)
+ 
+postResample(pred = knn_pred, obs = data_test_standardized$log_price)
+
+#      RMSE  Rsquared       MAE 
+# 0.4726992 0.5726099 0.3493219 
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+knn_varImp <- data.frame(variables = row.names(varImp(knn_fit)$importance),
+                          varImp(knn_fit)$importance)
+
+ggplot(data = knn_varImp, mapping = aes(x=reorder(variables, Overall),
+                                         y=Overall,
+                                         fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "") +
+  ggtitle("K nearest neighhbor: Variables d'importances") 
+```
+
+## Boosting 
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+# Grid <- expand.grid(n.trees = seq(100,400,50),
+#                     interaction.depth = seq(2,4,1),
+#                     shrinkage = seq(0.07,0.15,0.01),
+#                     n.minobsinnode= seq(2,4,1))
+
+Grid <- expand.grid(n.trees = 300,
                     interaction.depth = 2,
-                    shrinkage = .1, 
+                    shrinkage = 0.1,
                     n.minobsinnode= 3)
 
 set.seed(777)
-gbm_fit  <-  train(log_price~., data = data_train,  
-                  method = "gbm", verbose= FALSE,
-                  bag.fraction = 1, 
-                  distribution = "gaussian",
-                  trControl = rcvCtrl, tuneGrid = Grid)
-plot(gbm_fit)              
-gbm_fit$bestTune
+gbm_fit  <-  train(log_price~., 
+                   data = data_train,  
+                   method = "gbm", 
+                   bag.fraction = 0.5, 
+                   distribution = "gaussian",
+                   trControl = K5_CV_seed, 
+                   tuneGrid = Grid)
+
+# plot(gbm_fit)
+# gbm_fit$bestTune
 
 gbm_pred <- predict(gbm_fit, data_test)
 
 #RMSE for BoostingTrees
 postResample(pred = gbm_pred, obs = data_test$log_price)
+
+#      RMSE  Rsquared       MAE 
+# 4647998 0.5868486 0.3437535 
 ```
 
 
 ## XGboost
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-# control variables
-seed <- 777
-m <- 100
-rcvSeeds <- setSeeds(method = "repeatedcv", 
-                      numbers = 5, repeats = 5, 
-                      tunes = m, seed = seed)
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+# Grid <- expand.grid(nrounds = 0:50,
+#                       max_depth = 5,
+#                       eta = 0.3,
+#                       gamma = 0.01,
+#                       colsample_bytree = 0.5,
+#                       min_child_weight = 0,
+#                       subsample = 0.5)
 
-rcvCtrl <- trainControl(method = "cv", number = 5, allowParallel = TRUE, 
-                        verboseIter = FALSE, 
-                        returnData = FALSE,
-                        seeds = rcvSeeds)
-
-Grid <- expand.grid(nrounds = 1:200,
-                      max_depth = 5,
-                      eta = 0.3,
-                      gamma = 0.01,
-                      colsample_bytree = 0.5,
-                      min_child_weight = 0,
-                      subsample = 0.5)
+Grid <- expand.grid(nrounds = 47,
+                    max_depth = 5,
+                    eta = 0.3,
+                    gamma = 0.01,
+                    colsample_bytree = 0.5,
+                    min_child_weight = 0,
+                    subsample = 0.5)
 
 set.seed(777)
-xgboost_fit  <-  train(log_price~., data = data_train,  
-                  method = "xgbTree", 
-                  trControl = rcvCtrl, tuneGrid = Grid)
-plot(xgboost_fit)              
-xgboost_fit$bestTune
+xgboost_fit  <-  train(log_price~., 
+                       data = data_train,  
+                       method = "xgbTree", 
+                       bag.fraction = 0.5, 
+                       trControl = K5_CV_seed, 
+                       tuneGrid = Grid,
+                       allowParallel = TRUE)
+
+# plot(xgboost_fit)
+# xgboost_fit$bestTune
 
 xgboost_pred <- predict(xgboost_fit, data_test)
 
 #RMSE for BoostingTrees
 postResample(pred = xgboost_pred, obs = data_test$log_price)
+
+#      RMSE  Rsquared       MAE 
+# 0.4524891 0.6083713 0.3340023 
 ```
 
 ## Random forest (trop long)
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
-# trctrl <- trainControl(method="cv", number = 5, classProbs = TRUE)
-#                        
-# set.seed(777)
-# rf_fit  <-  train(log_price ~ .,
-#                   data = data_train,
-#                   method = "rf",
-#                   trControl = trctrl)
-# 
-# plot(rf_fit)
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+# Grid <- expand.grid(.mtry=c(1:5))
+Grid <- expand.grid(.mtry=5)
+
+set.seed(777)
+rf_fit  <-  train(log_price ~ .,
+                  data = data_train,
+                  method = "rf",
+                  trControl = K5_CV_seed, 
+                  tuneGrid = Grid,
+                  allowParallel = TRUE)
+
+plot(rf_fit)
 # rf_fit$bestTune
-# 
-# rf_pred <- predict(rf_fit, newdata = data_test)
-# 
-# #RMSE for Random Forest
-# postResample(pred = rf_pred, obs = data_test$log_price)
+
+rf_pred <- predict(rf_fit, newdata = data_test)
+
+#RMSE for Random Forest
+postResample(pred = rf_pred, obs = data_test$log_price)
+
+#      RMSE  Rsquared       MAE 
+# 0.4418751 0.6271526 0.3233835 
 ```
 
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=F}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 models <- list(KNN = knn_fit, Boosing = gbm_fit, XCBoost = xgboost_fit)
 res <- resamples(models)
 colvec <- c("orange","darkolivegreen3", "blue","brown","yellow")
