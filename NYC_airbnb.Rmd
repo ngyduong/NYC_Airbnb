@@ -529,6 +529,12 @@ data_test  <- data_model[-trainIndex,]
 K5_CV <- trainControl(method = "cv", number = 5)
 ```
 
+## Allow for Parallel computing
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+registerDoMC(cores = 3)
+```
+
 ## Ordinary Least Square model 
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
@@ -736,12 +742,6 @@ Preproc_test <- preProcess(data_test[,c("accommodates","beds","bedrooms",
 data_test_standardized <- predict(Preproc_test, data_test)
 ```
 
-## Allow for Parallel computing
-
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
-registerDoMC(cores = 3)
-```
-
 ## Set seeds
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
@@ -777,14 +777,14 @@ K5_CV_seed <- trainControl(method = "cv", number = 5, classProbs = TRUE,
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
-# grid <- expand.grid(k = seq(15,20,1))
-grid <- expand.grid(k = 19)
+# Grid <- expand.grid(k = seq(15,20,1))
+Grid <- expand.grid(k = 19)
 
 knn_fit <- train(log_price ~., 
                  data = data_train_standardized,
                  method = "knn",
                  trControl = K5_CV_seed,
-                 tuneGrid = grid,
+                 tuneGrid = Grid,
                  allowParallel = TRUE)
 
 # plot(knn_fit)
@@ -885,7 +885,7 @@ postResample(pred = xgboost_pred, obs = data_test$log_price)
 # 0.4524891 0.6083713 0.3340023 
 ```
 
-## Random forest (trop long)
+## Random forest
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 # Grid <- expand.grid(.mtry=c(1:5))
@@ -899,7 +899,7 @@ rf_fit  <-  train(log_price ~ .,
                   tuneGrid = Grid,
                   allowParallel = TRUE)
 
-plot(rf_fit)
+# plot(rf_fit)
 # rf_fit$bestTune
 
 rf_pred <- predict(rf_fit, newdata = data_test)
@@ -911,6 +911,13 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 # 0.4418751 0.6271526 0.3233835 
 ```
 
+## SVM (Regressor)
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+
+```
+
+## Comparaison des modèles
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
 models <- list(KNN = knn_fit, Boosing = gbm_fit, XCBoost = xgboost_fit)
