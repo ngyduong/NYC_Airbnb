@@ -291,7 +291,7 @@ write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewY
  
 # Data analysis / Data visualisation
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 # Nguyen Duong
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", sep = ",")
 
@@ -488,7 +488,9 @@ ggmap(map) +
              nudge_x = 0.015, nudge_y = -0.03)
 ```
 
-# Linear Models 
+# Models
+
+### Setting up the theme
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 theme_models <- theme(plot.title = element_text(hjust = 0.5),
@@ -498,6 +500,8 @@ theme_models <- theme(plot.title = element_text(hjust = 0.5),
 tag_source_models <- "The model has been fit using 62762 samples & 18 predictor (with constant)
 and the dependant variable was the log of price"
 ```
+
+### Split the data and setting seeds
 
 ```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 # # ===== Create a subset of the data to use in prediction ===== =====
@@ -525,226 +529,7 @@ data_train <- data_model[trainIndex,]
 data_test  <- data_model[-trainIndex,]
 
 # # ===== ===== Setting up the validation methods ===== =====
-# 5 Fold Cross Validation
-K5_CV <- trainControl(method = "cv", number = 5)
-```
 
-## Allow for Parallel computing
-
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
-registerDoMC(cores = 3)
-```
-
-## Ordinary Least Square model 
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-set.seed(777)
-
-ols_fit <- train(log_price ~ . - 
-                   host_is_superhost_False -
-                   property_type_SharedRoom -
-                   neighbourhood_group_cleansed_Queens -
-                   cancellation_policy_moderate, 
-                 data = data_train, 
-                 method = "lm" , 
-                 trControl = K5_CV)
-
-summary(ols_fit)
-
-ols_pred <- predict(ols_fit, data_test)
-
-postResample(pred = ols_pred, obs = data_test$log_price)
-```
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-ols_varImp <- data.frame(variables = row.names(varImp(ols_fit)$importance),
-                         varImp(ols_fit)$importance)
-
-ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
-                                        y=Overall,
-                                        fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme_models + labs(x = "", y = "", caption = tag_source_models) +
-  ggtitle("OLS: Variables d'importances") 
-```
-
-## Shrinkage models
-
-## Ridge regression
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-set.seed(777)
-
-ridge_fit <- train(log_price ~ . - 
-                     host_is_superhost_False -
-                     property_type_SharedRoom -
-                     neighbourhood_group_cleansed_Queens -
-                     cancellation_policy_moderate, 
-                   data = data_train, 
-                   method = "glmnet",
-                   tuneGrid = expand.grid(alpha = 0, 
-                                          lambda = seq(0, 1, 0.01)),
-                   preProcess = c("scale","center"),
-                   trControl = K5_CV)
-
-ridge_fit$bestTune
-
-ridge_pred <- predict(ridge_fit, data_test)
-
-postResample(pred = ridge_pred, obs = data_test$log_price)
-```
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-ridge_varImp <- data.frame(variables = row.names(varImp(ridge_fit)$importance),
-                           varImp(ridge_fit)$importance)
-
-ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
-                                        y=Overall,
-                                        fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme_models + labs(x = "", y = "", caption = tag_source_models) +
-  ggtitle("Ridge regression: Variables d'importances") 
-```
-
-## Lasso regression
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-set.seed(777)
-
-lasso_fit <- train(log_price ~ . - host_is_superhost_False -
-                     property_type_SharedRoom -
-                     neighbourhood_group_cleansed_Queens -
-                     cancellation_policy_moderate,  
-                   data = data_train, 
-                   method = "glmnet",
-                   tuneGrid = expand.grid(alpha = 1, 
-                                          lambda = seq(0, 1, 0.01)),
-                   preProcess = c("scale","center"),
-                   trControl = K5_CV)
-
-lasso_fit$bestTune
-
-lasso_pred <- predict(lasso_fit, data_test)
-
-postResample(pred = lasso_pred, obs = data_test$log_price)
-```
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-lasso_varImp <- data.frame(variables = row.names(varImp(lasso_fit)$importance),
-                           varImp(lasso_fit)$importance)
-
-ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
-                                        y=Overall,
-                                        fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme_models + labs(x = "", y = "", caption = tag_source_models) +
-  ggtitle("Lasso regression: Variables d'importances") 
-```
-
-# Polynomial Models 
-
-## Polynomial plots
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-set.seed(777)
-
-# We choose the number of maximum polynomial degree
-max_degree <- 5
-
-list <- c("bedrooms","minimum_nights","accommodates",
-          "cleaning_fee","availability_365","beds")
-
-for (l in list){
-  RMSE <- rep(0,max_degree)
-  for (d in 1:max_degree) {
-    PolyRegressor <- train(as.formula(bquote(log_price ~ poly(.(as.name(l)), .(d)))),
-                           data = data_train,
-                           method = "lm",
-                           trControl = K5_CV)
-    RMSE[d]<- PolyRegressor$results$RMSE
-  }
-  tem_data = data.frame(1:max_degree, RMSE)
-  plot <- ggplot(aes(x = 1:max_degree,y = RMSE), data = tem_data) +
-    geom_line(col="red") + theme_models +
-    labs(x = "Polynomial Degrees", y = "RMSE",
-         caption = "The model has been fit using 62942 samples & 1 predictor
-         and the dependant variable was the log of price") +
-    ggtitle(paste(l,"RMSE by polynomial degrees"))
-  print(plot)
-}
-```
-
-## Polynomial Regression
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-set.seed(777)
-
-poly_fit <- train(log_price ~ poly(accommodates,2) + 
-                    poly(availability_365,3) +
-                    poly(bedrooms,4) + . - 
-                    host_is_superhost_False -
-                    property_type_SharedRoom -
-                    neighbourhood_group_cleansed_Queens -
-                    cancellation_policy_moderate -
-                    accommodates -
-                    availability_365 -
-                    bedrooms,
-                  data = data_train, 
-                  method = "lm" , 
-                  trControl = K5_CV)
-
-summary(poly_fit)
-
-poly_pred <- predict(poly_fit, data_test)
-
-postResample(pred = poly_pred, obs = data_test$log_price)
-
-# RMSE 0.5016245
-```
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-poly_varImp <- data.frame(variables = row.names(varImp(poly_fit)$importance),
-                          varImp(poly_fit)$importance)
-
-ggplot(data = poly_varImp, mapping = aes(x=reorder(variables, Overall),
-                                         y=Overall,
-                                         fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme_models + 
-  labs(x = "", y = "", 
-       caption = "The model has been fit using 62762 samples & 23 predictor (with constant) and the dependant variable was the log of price.
-       The variable bedrooms was taken to the 4th polynomial degree, the variable availability_365 was taken to the 
-       3rd polynomial degree and the variable bedrooms was taken to the 2nd polynomial degree.") +
-  ggtitle("Polynomial regression: Variables d'importances") 
-```
-
-# Non Parametric models
-
-## PreProcess / Standardize
-
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
-#Train
-Preproc_train <- preProcess(data_train[,c("accommodates","beds","bedrooms",
-                                          "cleaning_fee","minimum_nights",
-                                          "availability_365",
-                                          "review_scores_rating")],
-                            method=c('center','scale'))
-
-data_train_standardized <- predict(Preproc_train,data_train)
-
-#Test
-Preproc_test <- preProcess(data_test[,c("accommodates","beds","bedrooms",
-                                        "cleaning_fee","minimum_nights",
-                                        "availability_365",
-                                        "review_scores_rating")],
-                            method=c('center','scale'))
-
-data_test_standardized <- predict(Preproc_test, data_test)
-```
-
-## Set seeds
-
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 # function to set up random seeds
 setSeeds <- function(method = "cv", numbers = 1, repeats = 1, tunes = NULL, seed = 1237) {
   #B is the number of resamples and integer vector of M (numbers + tune length if any)
@@ -772,9 +557,223 @@ K5_CV_seed <- trainControl(method = "cv", number = 5, classProbs = TRUE,
                            savePredictions = TRUE, seeds = rcvSeeds)
 ```
 
-## KNN
+### Allow for Parallel computing
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+registerDoMC(cores = 3)
+```
+
+## Ordinary Least Square model 
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+ols_fit <- train(log_price ~ . - 
+                   host_is_superhost_False -
+                   property_type_SharedRoom -
+                   neighbourhood_group_cleansed_Queens -
+                   cancellation_policy_moderate, 
+                 data = data_train, 
+                 method = "lm" , 
+                 trControl = K5_CV_seed)
+
+summary(ols_fit)
+
+ols_pred <- predict(ols_fit, data_test)
+
+postResample(pred = ols_pred, obs = data_test$log_price)
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+ols_varImp <- data.frame(variables = row.names(varImp(ols_fit)$importance),
+                         varImp(ols_fit)$importance)
+
+ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("OLS: Variables d'importances") 
+```
+
+## Ridge regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+ridge_fit <- train(log_price ~ . - 
+                     host_is_superhost_False -
+                     property_type_SharedRoom -
+                     neighbourhood_group_cleansed_Queens -
+                     cancellation_policy_moderate, 
+                   data = data_train, 
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 0, 
+                                          lambda = seq(0, 1, 0.01)),
+                   preProcess = c("scale","center"),
+                   trControl = K5_CV_seed)
+
+ridge_fit$bestTune
+
+ridge_pred <- predict(ridge_fit, data_test)
+
+postResample(pred = ridge_pred, obs = data_test$log_price)
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+ridge_varImp <- data.frame(variables = row.names(varImp(ridge_fit)$importance),
+                           varImp(ridge_fit)$importance)
+
+ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Ridge regression: Variables d'importances") 
+```
+
+## Lasso regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+lasso_fit <- train(log_price ~ . - 
+                     host_is_superhost_False -
+                     property_type_SharedRoom -
+                     neighbourhood_group_cleansed_Queens -
+                     cancellation_policy_moderate,  
+                   data = data_train, 
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 1, 
+                                          lambda = seq(0, 1, 0.01)),
+                   preProcess = c("scale","center"),
+                   trControl = K5_CV_seed)
+
+lasso_fit$bestTune
+
+lasso_pred <- predict(lasso_fit, data_test)
+
+postResample(pred = lasso_pred, obs = data_test$log_price)
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+lasso_varImp <- data.frame(variables = row.names(varImp(lasso_fit)$importance),
+                           varImp(lasso_fit)$importance)
+
+ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
+                                        y=Overall,
+                                        fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Lasso regression: Variables d'importances") 
+```
+
+## Polynomial Models 
+
+### Polynomial plots
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+# We choose the number of maximum polynomial degree
+max_degree <- 5
+
+list <- c("bedrooms","minimum_nights","accommodates",
+          "cleaning_fee","availability_365","beds")
+
+for (l in list){
+  RMSE <- rep(0,max_degree)
+  for (d in 1:max_degree) {
+    PolyRegressor <- train(as.formula(bquote(log_price ~ poly(.(as.name(l)), .(d)))),
+                           data = data_train,
+                           method = "lm",
+                           trControl = K5_CV_seed)
+    RMSE[d]<- PolyRegressor$results$RMSE
+  }
+  tem_data = data.frame(1:max_degree, RMSE)
+  plot <- ggplot(aes(x = 1:max_degree,y = RMSE), data = tem_data) +
+    geom_line(col="red") + theme_models +
+    labs(x = "Polynomial Degrees", y = "RMSE",
+         caption = "The model has been fit using 62942 samples and 1 predictor.
+         The dependant variable was the log of price") +
+    ggtitle(paste(l,"RMSE by polynomial degrees"))
+  print(plot)
+}
+```
+
+### Polynomial Regression
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+set.seed(777)
+
+poly_fit <- train(log_price ~ poly(accommodates,3) + 
+                    poly(availability_365,3) +
+                    poly(bedrooms,4) + 
+                    poly(cleaning_fee,5) +. - 
+                    host_is_superhost_False -
+                    property_type_SharedRoom -
+                    neighbourhood_group_cleansed_Queens -
+                    cancellation_policy_moderate -
+                    accommodates -
+                    availability_365 -
+                    bedrooms -
+                    cleaning_fee,
+                  data = data_train, 
+                  method = "lm" , 
+                  trControl = K5_CV_seed)
+
+summary(poly_fit)
+
+poly_pred <- predict(poly_fit, data_test)
+
+postResample(pred = poly_pred, obs = data_test$log_price)
+
+# RMSE 0.5016245
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+poly_varImp <- data.frame(variables = row.names(varImp(poly_fit)$importance),
+                          varImp(poly_fit)$importance)
+
+ggplot(data = poly_varImp, mapping = aes(x=reorder(variables, Overall),
+                                         y=Overall,
+                                         fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme_models + 
+  labs(x = "", y = "", 
+       caption = "The model has been fit using 62762 samples & 23 predictor (with constant) and the dependant variable was the log of price.
+       The variable bedrooms was taken to the 4th polynomial degree, the variable availability_365 was taken to the 
+       3rd polynomial degree and the variable bedrooms was taken to the 2nd polynomial degree.") +
+  ggtitle("Polynomial regression: Variables d'importances") 
+```
+
+## KNN
+
+### PreProcess / Standardize
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+#Train
+Preproc_train <- preProcess(data_train[,c("accommodates","beds","bedrooms",
+                                          "cleaning_fee","minimum_nights",
+                                          "availability_365",
+                                          "review_scores_rating")],
+                            method=c('center','scale'))
+
+data_train_standardized <- predict(Preproc_train,data_train)
+
+#Test
+Preproc_test <- preProcess(data_test[,c("accommodates","beds","bedrooms",
+                                        "cleaning_fee","minimum_nights",
+                                        "availability_365",
+                                        "review_scores_rating")],
+                            method=c('center','scale'))
+
+data_test_standardized <- predict(Preproc_test, data_test)
+```
+
+### KNN Regression
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
 set.seed(777)
 
 # Grid <- expand.grid(k = seq(15,20,1))
@@ -911,74 +910,111 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 # 0.4418751 0.6271526 0.3233835 
 ```
 
-## Comparaison des modèles
+## Comparaison of models (Train set)
+
+### RMSE and R2 based on Train set
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-models <- list(Linear = ols_fit, Ridge = ridge_fit, Polynomial = poly_fit,
-               KNN =  knn_fit, Boosting = gbm_fit, XGBoost = xgboost_fit)
+models <- list(Linear = ols_fit, 
+               Ridge = ridge_fit, 
+               Polynomial = poly_fit,
+               KNN =  knn_fit, 
+               Boosting = gbm_fit, 
+               XGBoost = xgboost_fit,
+               RForest = rf_fit)
 res <- resamples(models)
 
-a = data.frame (model = "Linear", RMSE = res$values["Linear~RMSE"])
-b = data.frame (model = "Ridge", RMSE = res$values["Ridge~RMSE"])
-c = data.frame (model = "Polynomial", RMSE = res$values["Polynomial~RMSE"])
-d = data.frame (model = "KNN", RMSE = res$values["KNN~RMSE"])
-e = data.frame (model = "Boosting", RMSE = res$values["Boosting~RMSE"])
-f = data.frame (model = "XGBoost", RMSE = res$values["XGBoost~RMSE"])
+models_list = c("Linear", "Ridge", "Polynomial", "KNN",
+                "Boosting", "XGBoost", "RForest")
 
-# Rename columns
-a <- a %>% rename(RMSE = Linear.RMSE)
-b <- b %>% rename(RMSE = Ridge.RMSE) 
-c <- c %>% rename(RMSE = Polynomial.RMSE) 
-d <- d %>% rename(RMSE = KNN.RMSE) 
-e <- e %>% rename(RMSE = Boosting.RMSE) 
-f <- f %>% rename(RMSE = XGBoost.RMSE) 
+df = data.frame()
+for (i in models_list){
+  x = data.frame (model = i, 
+                  RMSE = res$values[paste(i,"RMSE", sep = "~")],
+                  Rsquared = res$values[paste(i,"Rsquared", sep = "~")])
+  x <- x %>% rename(RMSE = paste(i,".RMSE", sep = ""))
+  x <- x %>% rename(Rsquared = paste(i,".Rsquared", sep = ""))
+  df <- rbind(df,x)
+}
 
-# Merge vector
-df <- rbind(a, b, c ,d ,e, f)
-df$category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost") , 1, 0),
-                                    labels = c("Parametric", "Non-Parametric"))
+df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
+                                             "RForest"), 1, 0), 
+                      labels = c("Parametric", "Non-Parametric"))
 
-
-# Boxplot
 theme_models <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"))
 
-ggplot(data = df, aes(x = model, y = RMSE, fill = category)) +
-  geom_boxplot(alpha = 0.9) +
-  theme_models + labs(x = "", y = "RMSE") +
-  ggtitle("Comparison of models performances (RMSE)") +
-  scale_fill_brewer(palette = "Accent") 
+# RMSE 
+ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
+                      y = RMSE, fill = Category)) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
+  theme_models + 
+  labs(x = "", y = "RMSE", 
+       caption = "All the models were fit using the train set with 62762 observations and 21 variables.
+       The validation methode chosen was a 5 Fold Cross Validation") +
+  ggtitle("Models Performances by RMSE (based on train set)") +
+  scale_fill_manual(values=c("blue3", "green3"))
+
+# Rsquared
+ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
+                      y = Rsquared, fill = Category)) +
+  geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
+  theme_models + 
+  labs(x = "", y = "Rsquared", 
+       caption = "All the models were fit using the Train set with 62762 observations and 21 variables. 
+       The validation methode chosen was a 5 Fold Cross Validation") +
+  ggtitle("Models Performances by Rsquared (based on Train set)") +
+  scale_fill_manual(values=c("blue3", "green3"))
 ```
 
-
+## Comparaison of models (Test set)
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-models <- list(Linear = ols_fit, Ridge = ridge_fit, Polynomial = poly_fit,
-               KNN =  knn_fit, Boosting = gbm_fit, XGBoost = xgboost_fit)
-res <- resamples(models)
+pred_list = c("ols_pred", "ridge_pred", "poly_pred", "knn_pred", 
+                "gbm_pred", "xgboost_pred", "rf_pred")
 
-a = data.frame (model = "Linear", y = res$values["Linear~Rsquared"])
-b = data.frame (model = "Ridge", y = res$values["Ridge~Rsquared"])
-c = data.frame (model = "Polynomial", y = res$values["Polynomial~Rsquared"])
-d = data.frame (model = "KNN", y = res$values["KNN~Rsquared"])
-e = data.frame (model = "Boosting", y = res$values["Boosting~Rsquared"])
-f = data.frame (model = "XGBoost", y = res$values["XGBoost~Rsquared"])
+models_list = c("Linear", "Ridge", "Polynomial", "KNN",
+                "Boosting", "XGBoost", "RForest")
 
-# Rename columns
-a <- a %>% rename(R2 = Linear.Rsquared)
-b <- b %>% rename(R2 = Ridge.Rsquared) 
-c <- c %>% rename(R2 = Polynomial.Rsquared) 
-d <- d %>% rename(R2 = KNN.Rsquared) 
-e <- e %>% rename(R2 = Boosting.Rsquared) 
-f <- f %>% rename(R2 = XGBoost.Rsquared) 
+df = data.frame()
+for (i in pred_list){
+  if (i == "knn_pred"){
+    x = as.data.frame(postResample(pred = get(i), 
+                                   obs = data_test_standardized$log_price))
+    names(x)[1] <- i
+    x <- t(x)
+  }
+  else {
+    x = as.data.frame(postResample(pred = get(i), obs = data_test$log_price)) 
+    names(x)[1] <- i
+    x <- t(x)
+  }
+  df <- rbind(df,x)
+}
 
-# Merge vector
-df <- rbind(a, b, c ,d ,e, f)
+df$model <- models_list
 
-# Boxplot
-ggplot(data = df, aes(x = model, y = R2)) +
-  geom_boxplot(fill = "#4271AE", colour = "#1F3552", alpha = 0.8,
-                outlier.colour = "#1F3552", outlier.shape = 20) +
-  theme_models + labs(x = "", y = "Rsquared") +
-  ggtitle("Comparison of models performances (Rsquared)") 
+df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
+                                             "RForest"), 1, 0), 
+                      labels = c("Parametric", "Non-Parametric"))
+
+# RMSE 
+ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
+                      y = RMSE, fill = Category)) +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models +
+  labs(x = "", y = "RMSE",
+       caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
+       The validation methode chosen was a 5 Fold Cross Validation") +
+  ggtitle("Models Performances by RMSE (based on Test set)") +
+  scale_fill_manual(values=c("blue3", "green3"))
+
+# Rsquared 
+ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
+                      y = Rsquared, fill = Category)) +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models +
+  labs(x = "", y = "Rsquared",
+       caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
+       The validation methode chosen was a 5 Fold Cross Validation") +
+  ggtitle("Models Performances by Rsquared (based on Test set)") +
+  scale_fill_manual(values=c("blue3", "green3"))
 ```
