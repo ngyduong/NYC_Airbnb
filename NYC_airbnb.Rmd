@@ -911,22 +911,74 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 # 0.4418751 0.6271526 0.3233835 
 ```
 
-## SVM (Regressor)
-
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-
-```
-
 ## Comparaison des modèles
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
-models <- list(KNN = knn_fit, Boosing = gbm_fit, XCBoost = xgboost_fit)
+models <- list(Linear = ols_fit, Ridge = ridge_fit, Polynomial = poly_fit,
+               KNN =  knn_fit, Boosting = gbm_fit, XGBoost = xgboost_fit)
 res <- resamples(models)
-colvec <- c("orange","darkolivegreen3", "blue","brown","yellow")
-boxplot(res$values[c("Logit~Accuracy","KNN~Accuracy","RandomForest~Accuracy",
-                     "BoostingTree~Accuracy")], 
-        names = names(models), col=colvec)
+
+a = data.frame (model = "Linear", RMSE = res$values["Linear~RMSE"])
+b = data.frame (model = "Ridge", RMSE = res$values["Ridge~RMSE"])
+c = data.frame (model = "Polynomial", RMSE = res$values["Polynomial~RMSE"])
+d = data.frame (model = "KNN", RMSE = res$values["KNN~RMSE"])
+e = data.frame (model = "Boosting", RMSE = res$values["Boosting~RMSE"])
+f = data.frame (model = "XGBoost", RMSE = res$values["XGBoost~RMSE"])
+
+# Rename columns
+a <- a %>% rename(RMSE = Linear.RMSE)
+b <- b %>% rename(RMSE = Ridge.RMSE) 
+c <- c %>% rename(RMSE = Polynomial.RMSE) 
+d <- d %>% rename(RMSE = KNN.RMSE) 
+e <- e %>% rename(RMSE = Boosting.RMSE) 
+f <- f %>% rename(RMSE = XGBoost.RMSE) 
+
+# Merge vector
+df <- rbind(a, b, c ,d ,e, f)
+df$category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost") , 1, 0),
+                                    labels = c("Parametric", "Non-Parametric"))
+
+
+# Boxplot
+theme_models <- theme(plot.title = element_text(hjust = 0.5),
+               plot.background = element_rect(fill = "#BFD5E3"))
+
+ggplot(data = df, aes(x = model, y = RMSE, fill = category)) +
+  geom_boxplot(alpha = 0.9) +
+  theme_models + labs(x = "", y = "RMSE") +
+  ggtitle("Comparison of models performances (RMSE)") +
+  scale_fill_brewer(palette = "Accent") 
 ```
 
 
 
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+models <- list(Linear = ols_fit, Ridge = ridge_fit, Polynomial = poly_fit,
+               KNN =  knn_fit, Boosting = gbm_fit, XGBoost = xgboost_fit)
+res <- resamples(models)
+
+a = data.frame (model = "Linear", y = res$values["Linear~Rsquared"])
+b = data.frame (model = "Ridge", y = res$values["Ridge~Rsquared"])
+c = data.frame (model = "Polynomial", y = res$values["Polynomial~Rsquared"])
+d = data.frame (model = "KNN", y = res$values["KNN~Rsquared"])
+e = data.frame (model = "Boosting", y = res$values["Boosting~Rsquared"])
+f = data.frame (model = "XGBoost", y = res$values["XGBoost~Rsquared"])
+
+# Rename columns
+a <- a %>% rename(R2 = Linear.Rsquared)
+b <- b %>% rename(R2 = Ridge.Rsquared) 
+c <- c %>% rename(R2 = Polynomial.Rsquared) 
+d <- d %>% rename(R2 = KNN.Rsquared) 
+e <- e %>% rename(R2 = Boosting.Rsquared) 
+f <- f %>% rename(R2 = XGBoost.Rsquared) 
+
+# Merge vector
+df <- rbind(a, b, c ,d ,e, f)
+
+# Boxplot
+ggplot(data = df, aes(x = model, y = R2)) +
+  geom_boxplot(fill = "#4271AE", colour = "#1F3552", alpha = 0.8,
+                outlier.colour = "#1F3552", outlier.shape = 20) +
+  theme_models + labs(x = "", y = "Rsquared") +
+  ggtitle("Comparison of models performances (Rsquared)") 
+```
