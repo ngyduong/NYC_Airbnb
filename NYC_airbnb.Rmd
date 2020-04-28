@@ -37,7 +37,7 @@ library(doMC)
 
 # Import Raw data
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, eval=FALSE}
 # Get the file names of every csv file with the pattern "listing_"
 files <- fs::dir_ls(glob = "listing_*csv")
 
@@ -80,13 +80,13 @@ write.csv(listings, "Data/data_compiled.csv", row.names = FALSE)
 
 # Data manipulations / Cleaning the data
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, eval=FALSE}
 data <- read.csv("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/data_compiled.csv", sep = ",")
 ```
 
 ## Dealing with missing values
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, eval=FALSE}
 # ===== ===== NA count ===== =====
 
 na_count <- t(data %>% summarise_each(funs(sum(is.na(.)))))
@@ -194,7 +194,7 @@ data <- data[complete.cases(data$cancellation_policy),]
 
 ## Dealing with categorical variables 
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, eval=FALSE}
 # # ===== ===== Type de logement ===== =====
 
 # We groups all 40 subgroups of logement types into 5 big groups
@@ -285,7 +285,7 @@ data <- mutate(data,
                         "StatenIsland", neighbourhood_group_cleansed))
 ```
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, eval=FALSE}
 write.csv(data, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/Data/clean_data.csv", row.names = FALSE) 
 ```
  
@@ -318,7 +318,7 @@ tag_source <- "Source: Inside Airbnb"
 
 ### Frequence of discrete variables
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 features_discrete <- names(select_if(data[,-c(1)],is.factor))
 # Without id
 
@@ -334,7 +334,7 @@ for (i in features_discrete) {
 
 ### Density and log of continuous variables
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 features_numeric <- names(select_if(data[,-c(1,6:7)],is.numeric))
 # Without id, latitude and longitude
 
@@ -363,7 +363,7 @@ for (i in features_numeric){
 
 ### Boxplot 
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 # # ===== ===== Prix par arrondissement ===== =====
 ggplot(data, aes(x = neighbourhood_group_cleansed, y = log(price))) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 0.5,
@@ -394,7 +394,7 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
 
 ### Correlation matrix
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 ```
 
@@ -402,7 +402,7 @@ corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
 
 #### Evolution des prix par quartier
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 by_neighbourhood <- group_by(data, neighbourhood_cleansed) %>%
   summarize(longitude = median(longitude),
             latitude = median(latitude),
@@ -434,7 +434,7 @@ borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
 map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 # # ===== ===== Prix moyen par quartiers ===== =====
 ggmap(map) +
   geom_point(by_neighbourhood,
@@ -459,7 +459,7 @@ ggmap(map) +
 
 #### Evolution des prix par Arrondissement
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
   summarize(longitude = median(longitude),
             latitude = median(latitude),
@@ -469,7 +469,7 @@ by_borough <- group_by(data, neighbourhood_group_cleansed) %>%
             disponibilité_moyen = mean(availability_365))
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 # # ===== ===== Prix moyen par arrondissements ===== =====
 ggmap(map) +
   geom_point(by_borough, shape = 18,
@@ -492,7 +492,7 @@ ggmap(map) +
 
 ### Setting up the theme
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 theme_models <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"),
                legend.position = "none")
@@ -503,7 +503,7 @@ and the dependant variable was the log of price"
 
 ### Split the data and setting seeds
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 # # ===== Create a subset of the data to use in prediction ===== =====
 
 data_model <- data %>% select(-c("id", "neighbourhood_cleansed", 
@@ -565,7 +565,7 @@ registerDoMC(cores = 3)
 
 ## Ordinary Least Square model 
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 ols_fit <- train(log_price ~ . - 
@@ -584,7 +584,7 @@ ols_pred <- predict(ols_fit, data_test)
 postResample(pred = ols_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 ols_varImp <- data.frame(variables = row.names(varImp(ols_fit)$importance),
                          varImp(ols_fit)$importance)
 
@@ -598,7 +598,7 @@ ggplot(data = ols_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Ridge regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 ridge_fit <- train(log_price ~ . - 
@@ -620,7 +620,7 @@ ridge_pred <- predict(ridge_fit, data_test)
 postResample(pred = ridge_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 ridge_varImp <- data.frame(variables = row.names(varImp(ridge_fit)$importance),
                            varImp(ridge_fit)$importance)
 
@@ -634,7 +634,7 @@ ggplot(data = ridge_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Lasso regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 lasso_fit <- train(log_price ~ . - 
@@ -656,7 +656,7 @@ lasso_pred <- predict(lasso_fit, data_test)
 postResample(pred = lasso_pred, obs = data_test$log_price)
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 lasso_varImp <- data.frame(variables = row.names(varImp(lasso_fit)$importance),
                            varImp(lasso_fit)$importance)
 
@@ -672,7 +672,7 @@ ggplot(data = lasso_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ### Polynomial plots
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 # We choose the number of maximum polynomial degree
@@ -703,7 +703,7 @@ for (l in list){
 
 ### Polynomial Regression
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 poly_fit <- train(log_price ~ poly(accommodates,3) + 
@@ -731,7 +731,7 @@ postResample(pred = poly_pred, obs = data_test$log_price)
 # RMSE 0.5016245
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 poly_varImp <- data.frame(variables = row.names(varImp(poly_fit)$importance),
                           varImp(poly_fit)$importance)
 
@@ -773,7 +773,7 @@ data_test_standardized <- predict(Preproc_test, data_test)
 
 ### KNN Regression
 
-```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
 set.seed(777)
 
 # Grid <- expand.grid(k = seq(15,20,1))
@@ -797,7 +797,7 @@ postResample(pred = knn_pred, obs = data_test_standardized$log_price)
 # 0.4726992 0.5726099 0.3493219 
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 knn_varImp <- data.frame(variables = row.names(varImp(knn_fit)$importance),
                           varImp(knn_fit)$importance)
 
@@ -846,7 +846,7 @@ postResample(pred = gbm_pred, obs = data_test$log_price)
 
 ## XGboost
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 # Grid <- expand.grid(nrounds = 0:50,
 #                       max_depth = 5,
 #                       eta = 0.3,
@@ -884,9 +884,23 @@ postResample(pred = xgboost_pred, obs = data_test$log_price)
 # 0.4524891 0.6083713 0.3340023 
 ```
 
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+xgboost_varImp <- data.frame(variables = row.names(varImp(xgboost_fit)$importance),
+                             varImp(xgboost_fit)$importance)
+
+ggplot(data = xgboost_varImp, mapping = aes(x=reorder(variables, Overall),
+                                            y=Overall, fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme(plot.title = element_text(hjust = 0.5),
+               plot.background = element_rect(fill = "#BFD5E3"),
+               legend.position = "none") + 
+  labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("XGBoost: Variables d'importances") 
+```
+
 ## Random forest
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 # Grid <- expand.grid(.mtry=c(1:5))
 Grid <- expand.grid(.mtry=5)
 
@@ -914,7 +928,7 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 
 ### RMSE and R2 based on Train set
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 models <- list(Linear = ols_fit, 
                Ridge = ridge_fit, 
                Polynomial = poly_fit,
@@ -941,14 +955,14 @@ df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost",
                                              "RForest"), 1, 0), 
                       labels = c("Parametric", "Non-Parametric"))
 
-theme_models <- theme(plot.title = element_text(hjust = 0.5),
+theme_models2 <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"))
 
 # RMSE 
 ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
                       y = RMSE, fill = Category)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
-  theme_models + 
+  theme_models2 + 
   labs(x = "", y = "RMSE", 
        caption = "All the models were fit using the train set with 62762 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
@@ -959,7 +973,7 @@ ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T),
 ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
                       y = Rsquared, fill = Category)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
-  theme_models + 
+  theme_models2 + 
   labs(x = "", y = "Rsquared", 
        caption = "All the models were fit using the Train set with 62762 observations and 21 variables. 
        The validation methode chosen was a 5 Fold Cross Validation") +
@@ -969,7 +983,7 @@ ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F),
 
 ## Comparaison of models (Test set)
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo-T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 pred_list = c("ols_pred", "ridge_pred", "poly_pred", "knn_pred", 
                 "gbm_pred", "xgboost_pred", "rf_pred")
 
@@ -1001,7 +1015,7 @@ df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost",
 # RMSE 
 ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
                       y = RMSE, fill = Category)) +
-  geom_bar(stat = "identity", alpha=0.5) + theme_models +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
   labs(x = "", y = "RMSE",
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
@@ -1011,10 +1025,25 @@ ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T),
 # Rsquared 
 ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
                       y = Rsquared, fill = Category)) +
-  geom_bar(stat = "identity", alpha=0.5) + theme_models +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
   labs(x = "", y = "Rsquared",
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
   ggtitle("Models Performances by Rsquared (based on Test set)") +
   scale_fill_manual(values=c("blue3", "green3"))
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+rf_varImp <- data.frame(variables = row.names(varImp(rf_fit)$importance),
+                        varImp(rf_fit)$importance)
+
+ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
+                                         y=Overall,
+                                         fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme(plot.title = element_text(hjust = 0.5),
+               plot.background = element_rect(fill = "#BFD5E3"),
+               legend.position = "none") + 
+  labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Random Forest: Variables d'importances") 
 ```
