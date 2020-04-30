@@ -362,14 +362,14 @@ for (i in features_numeric){
     geom_histogram(colour="black", fill="dodgerblue3",
                    aes(y = ..density..)) + theme + 
     ggtitle(str_replace_all(str_to_title(i), c("_" = " "))) +
-    labs(x = "", y = "Density", caption = tag_source) +
+    labs(x = "", y = "Densité", caption = tag_source) +
     geom_density(fill = "cyan", colour = "cyan",
                  alpha = 0.5, lwd=0.5, linetype = "dashed")
 
   log_plot <- ggplot(mapping = aes(x = log(data[,i]))) +
     geom_histogram(colour="black", fill="forestgreen",
                    aes(y= ..density..)) + theme +
-    labs(x = "", y = "Density", caption = tag_source) +
+    labs(x = "", y = "Densité", caption = tag_source) +
     ggtitle(str_replace_all(paste("Log de",str_to_title(i)), 
                             c("_" = " "))) +
     geom_density(fill = "olivedrab2", colour = "olivedrab2",
@@ -414,17 +414,35 @@ ggplot(data, aes(x = neighbourhood_group_cleansed,
                 y= ..prop.. ), stat= "count", vjust = -.4, size=2) +
   facet_grid(~property_type) +
   scale_y_continuous(labels = scales::percent) +
-  ggtitle("Répartition des logements par arrondissement") + 
+  ggtitle("Répartition des arrondissement par logements") + 
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(fill = "#BFD5E3"),
         axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   labs(x = "", y = "", caption = tag_source, fill = "Arrondissement") +
   scale_color_discrete()
+
+ggplot(data, aes(x = property_type, 
+                 group = neighbourhood_group_cleansed)) +
+  geom_bar(aes(y = ..prop.., 
+               fill = factor(..x.., labels = c('Appartment','House',
+                                               'Private Room',"Shared Room"))),
+           stat="count") +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), 
+            stat= "count", vjust = -.5, hjust = 0.1, size=2) +
+  facet_grid(~neighbourhood_group_cleansed) +
+  scale_y_continuous(labels = scales::percent) +
+  ggtitle("Répartition des logements par arrondissement") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "#BFD5E3"),
+        axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  labs(x = "", y = "", caption = tag_source, fill = "Type de propriété") +
+  scale_color_discrete()
 ```
 
 ### Correlation matrix
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T, eval=F}
 my_fn <- function(data, mapping, method="p", use="pairwise", ...) {
   x <- eval_data_col(data, mapping$x)
   y <- eval_data_col(data, mapping$y)
@@ -447,6 +465,17 @@ ggpairs(data[,features_numeric],
 ```
 
 ### Spatial Heatmap
+
+```{r cache=TRUE,include=F,message=FALSE, warning=FALSE, echo=T}
+height <- max(data$latitude) - min(data$latitude)
+width <- max(data$longitude) - min(data$longitude)
+borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
+             top     = max(data$latitude)  + 0.1 * height,
+             left    = min(data$longitude) - 0.1 * width,
+             right   = max(data$longitude) + 0.1 * width)
+
+map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
+```
 
 #### Evolution des prix par quartier
 
@@ -471,15 +500,6 @@ for (i in by_neighbourhood$neighbourhood_cleansed) {
 
 by_neighbourhood$neighbourhood_group_cleansed <-
   as.factor(by_neighbourhood$neighbourhood_group_cleansed)
-
-height <- max(data$latitude) - min(data$latitude)
-width <- max(data$longitude) - min(data$longitude)
-borders <- c(bottom  = min(data$latitude)  - 0.1 * height,
-             top     = max(data$latitude)  + 0.1 * height,
-             left    = min(data$longitude) - 0.1 * width,
-             right   = max(data$longitude) + 0.1 * width)
-
-map <- get_stamenmap(borders, zoom = 11, maptype = "terrain")
 ```
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
@@ -493,16 +513,6 @@ ggmap(map) +
   labs(x = "", y = "", caption = tag_source, 
        col = "Prix moyen", shape = "Arrondissement") +
   ggtitle("Prix moyen par quartier")
-
-# # ===== ===== Score median par quartiers ===== =====
-ggmap(map) +
-  geom_point(by_neighbourhood,
-             mapping = aes(x = longitude, y = latitude,
-                           col = scores_moyen,
-                           shape = neighbourhood_group_cleansed)) +
-  scale_colour_gradient(low = "blue", high = "red") + theme +
-  labs(x = "", y = "", caption = tag_source, col = "Score moyen") +
-  ggtitle("Score median par quartier")
 ```
 
 #### Evolution des prix par Arrondissement
@@ -527,8 +537,7 @@ ggmap(map) +
   theme + labs(x = "", y = "", caption = tag_source,
                size = "Disponibilité annuel moyen",
                col = "Prix moyen") +
-  ggtitle("Prix moyen (en log) et disponibilité
-          par arrondissements") +
+  ggtitle("Prix moyen et disponibilité par arrondissements") +
   geom_label(by_borough,
              mapping = aes(longitude, latitude,
                            label = neighbourhood_group_cleansed),
