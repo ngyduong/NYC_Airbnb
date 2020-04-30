@@ -33,6 +33,7 @@ library(e1071)
 library(kernlab)
 library(corrplot)
 library(doMC)
+library(GGally)
 ```
 
 # Import Raw data
@@ -319,22 +320,39 @@ tag_source <- "Source: Inside Airbnb"
 ### Frequence of discrete variables
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
-features_discrete <- names(select_if(data[,-c(1)],is.factor))
-# Without id
+names <- names(data)
+
+data <- data %>% rename(arrondissement = neighbourhood_group_cleansed, 
+                        type_de_propriété = property_type,
+                        politique_annulation = cancellation_policy)
+
+features_discrete <- names(select_if(data[,-c(1,5)],is.factor))
+# Without id, neighbourhood_group_cleansed
 
 for (i in features_discrete) {
   plot <-ggplot(mapping = aes_string(x = fct_infreq(data[,i]),
                                      fill = data[,i])) +
-    geom_bar(width = 1, colour = "black", show.legend = F) +
-    theme + labs(x = "", y = "Fréquence", caption = tag_source) +
-    ggtitle(str_replace_all(toupper(i), c("_" = " ", "CLEANSED" = "")))
+    geom_bar(width = 1, colour = "black", show.legend = F,
+             aes(y = ((..count..)/sum(..count..)))) +
+    geom_text(aes(y = ((..count..)/sum(..count..)),
+                  label = scales::percent((..count..)/sum(..count..))),
+              stat = "count", size=4, vjust = -.3) +
+    scale_y_continuous(labels = scales::percent) +
+    theme + labs(x = "", y = "Pourcentage", caption = tag_source) +
+    ggtitle(str_replace_all(str_to_title(i), c("_" = " ")))
   print(plot)
 }
+
+names(data) <- names
 ```
 
 ### Density and log of continuous variables
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+names <- names(data)
+
+data <- data %>% rename(prix = price)
+
 features_numeric <- names(select_if(data[,-c(1,6:7)],is.numeric))
 # Without id, latitude and longitude
 
@@ -343,7 +361,7 @@ for (i in features_numeric){
   plot <- ggplot(mapping = aes(x = data[,i])) +
     geom_histogram(colour="black", fill="dodgerblue3",
                    aes(y = ..density..)) + theme + 
-    ggtitle(str_replace_all(toupper(i), c("_" = " "))) +
+    ggtitle(str_replace_all(str_to_title(i), c("_" = " "))) +
     labs(x = "", y = "Density", caption = tag_source) +
     geom_density(fill = "cyan", colour = "cyan",
                  alpha = 0.5, lwd=0.5, linetype = "dashed")
@@ -352,13 +370,15 @@ for (i in features_numeric){
     geom_histogram(colour="black", fill="forestgreen",
                    aes(y= ..density..)) + theme +
     labs(x = "", y = "Density", caption = tag_source) +
-    ggtitle(str_replace_all(paste("Log of",toupper(i)), 
+    ggtitle(str_replace_all(paste("Log de",str_to_title(i)), 
                             c("_" = " "))) +
     geom_density(fill = "olivedrab2", colour = "olivedrab2",
                  alpha = 0.5, lwd=0.5, linetype = "dashed")
 
   grid.arrange(plot, log_plot, ncol=2)
 }
+
+names(data) <- names
 ```
 
 ### Boxplot 
@@ -385,17 +405,45 @@ ggplot(data, aes(x = neighbourhood_group_cleansed, y = log(price),
 
 # # ===== ===== Répartition des logements par arrondissement ===== =====
 
-ggplot(data, aes(x = neighbourhood_group_cleansed, fill = property_type)) +
-  geom_bar(width = 1, colour = "black", show.legend = T) +
-  ggtitle("Répartition des logements par arrondissement") +
-  scale_fill_discrete(name = "Type de logement") + theme +
-  labs(x = "Arrondissement", y = "Fréquence", caption = tag_source)
+ggplot(data, aes(x = neighbourhood_group_cleansed, 
+                 group = property_type)) +
+  geom_bar(aes(y = ..prop.., 
+               fill = factor(..x.., labels = c('Bronx','Brooklyn','Manhattan',
+                              "Queens","Staten Island"))), stat="count") +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), stat= "count", vjust = -.4, size=2) +
+  facet_grid(~property_type) +
+  scale_y_continuous(labels = scales::percent) +
+  ggtitle("Répartition des logements par arrondissement") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "#BFD5E3"),
+        axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  labs(x = "", y = "", caption = tag_source, fill = "Arrondissement") +
+  scale_color_discrete()
 ```
 
 ### Correlation matrix
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
-corrplot(cor(data[,features_numeric]), method = "pie", type = "lower")
+my_fn <- function(data, mapping, method="p", use="pairwise", ...) {
+  x <- eval_data_col(data, mapping$x)
+  y <- eval_data_col(data, mapping$y)
+  corr <- cor(x, y, method=method, use=use)
+  colFn <- colorRampPalette(c("blue", "white", "red"), 
+                            interpolate ='spline')
+  fill <- colFn(100)[findInterval(corr, seq(-1, 1, length=100))]
+  ggally_cor(data = data, mapping = mapping, ...) + 
+    theme_void() + theme(panel.background = element_rect(fill=fill))
+  }
+
+ggpairs(data[,features_numeric], 
+        upper = list(continuous = my_fn), lower = "blank") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "#BFD5E3"),
+        axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  labs(caption = tag_source) +
+  ggtitle("Matrice de corrélation des variables continues")
 ```
 
 ### Spatial Heatmap
