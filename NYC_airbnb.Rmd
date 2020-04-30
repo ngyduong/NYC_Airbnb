@@ -1044,7 +1044,7 @@ ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F),
 pred_list = c("ols_pred", "ridge_pred", "poly_pred", "knn_pred", 
                 "gbm_pred", "xgboost_pred", "rf_pred")
 
-models_list = c("Linear", "Ridge", "Polynomial", "KNN",
+models_list = c("OLS", "Ridge", "Polynomial", "KNN",
                 "Boosting", "XGBoost", "RForest")
 
 df = data.frame()
@@ -1067,7 +1067,7 @@ df$model <- models_list
 
 df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
                                              "RForest"), 1, 0), 
-                      labels = c("Parametric", "Non-Parametric"))
+                      labels = c("Linear", "Non-Linear"))
 
 # RMSE 
 ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
@@ -1104,3 +1104,16 @@ ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
   labs(x = "", y = "", caption = tag_source_models) +
   ggtitle("Random Forest: Variables d'importances") 
 ```
+
+
+## Prediction vs Actual
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+results <- as.data.frame (cbind (exp(data_test$log_price), exp(xgboost_pred)))
+results <- results %>% rename (Actuals = V1,
+                   Predictions = V2)
+results$Gap <- abs(results$Actuals - results$Predictions)
+head (results)
+summary(results$Gap)
+```
+
