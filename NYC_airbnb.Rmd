@@ -957,7 +957,7 @@ ggplot(data = xgboost_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Random forest
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T, eval=F}
 # Grid <- expand.grid(.mtry=c(1:5))
 Grid <- expand.grid(.mtry=5)
 
@@ -979,6 +979,14 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 
 #      RMSE  Rsquared       MAE 
 # 0.4418751 0.6271526 0.3233835 
+
+# save the model to disk
+saveRDS(rf_fit, "/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/rf_fit.rds")
+```
+
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+rf_fit <- readRDS("/Users/ngyduong/Documents/Machine Learning/Github_projects/NewYork_Airbnb/NYC_Airbnb/rf_fit.rds")
+rf_pred <- predict(rf_fit, newdata = data_test)
 ```
 
 ## Comparaison of models (Train set)
@@ -986,7 +994,7 @@ postResample(pred = rf_pred, obs = data_test$log_price)
 ### RMSE and R2 based on Train set
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
-models <- list(Linear = ols_fit, 
+models <- list(OLS = ols_fit, 
                Ridge = ridge_fit, 
                Polynomial = poly_fit,
                KNN =  knn_fit, 
@@ -995,7 +1003,7 @@ models <- list(Linear = ols_fit,
                RForest = rf_fit)
 res <- resamples(models)
 
-models_list = c("Linear", "Ridge", "Polynomial", "KNN",
+models_list = c("OLS", "Ridge", "Polynomial", "KNN",
                 "Boosting", "XGBoost", "RForest")
 
 df = data.frame()
@@ -1003,38 +1011,38 @@ for (i in models_list){
   x = data.frame (model = i, 
                   RMSE = res$values[paste(i,"RMSE", sep = "~")],
                   Rsquared = res$values[paste(i,"Rsquared", sep = "~")])
-  x <- x %>% rename(RMSE = paste(i,".RMSE", sep = ""))
-  x <- x %>% rename(Rsquared = paste(i,".Rsquared", sep = ""))
+  x <- x %>% rename(RMSE = paste(i,"RMSE", sep = "."))
+  x <- x %>% rename(Rsquared = paste(i,"Rsquared", sep = "."))
   df <- rbind(df,x)
 }
 
-df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
+df$Catégorie <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
                                              "RForest"), 1, 0), 
-                      labels = c("Parametric", "Non-Parametric"))
+                      labels = c("Linéaire", "Non Linéaire"))
 
 theme_models2 <- theme(plot.title = element_text(hjust = 0.5),
                plot.background = element_rect(fill = "#BFD5E3"))
 
 # RMSE 
 ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
-                      y = RMSE, fill = Category)) +
+                      y = RMSE, fill = Catégorie)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
   theme_models2 + 
   labs(x = "", y = "RMSE", 
        caption = "All the models were fit using the train set with 62762 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
-  ggtitle("Models Performances by RMSE (based on train set)") +
+  ggtitle("Performances des modèles par RMSE (basé sur le Train set)") +
   scale_fill_manual(values=c("blue3", "green3"))
 
 # Rsquared
 ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
-                      y = Rsquared, fill = Category)) +
+                      y = Rsquared, fill = Catégorie)) +
   geom_boxplot(outlier.colour = "darkblue", outlier.size = 2, alpha=0.2) +
   theme_models2 + 
   labs(x = "", y = "Rsquared", 
        caption = "All the models were fit using the Train set with 62762 observations and 21 variables. 
        The validation methode chosen was a 5 Fold Cross Validation") +
-  ggtitle("Models Performances by Rsquared (based on Train set)") +
+  ggtitle("Performances des modèles par Rcarré (basé sur le Train set)") +
   scale_fill_manual(values=c("blue3", "green3"))
 ```
 
@@ -1065,34 +1073,38 @@ for (i in pred_list){
 
 df$model <- models_list
 
-df$Category <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
+df$Catégorie <- factor(ifelse(df$model %in% c("KNN", "Boosting", "XGBoost", 
                                              "RForest"), 1, 0), 
-                      labels = c("Linear", "Non-Linear"))
+                      labels = c("Linéaire", "Non Linéaire"))
 
 # RMSE 
 ggplot(data = df, aes(x = fct_reorder(model, RMSE, .desc = T), 
-                      y = RMSE, fill = Category)) +
+                      y = RMSE, fill = Catégorie)) +
   geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
   labs(x = "", y = "RMSE",
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
-  ggtitle("Models Performances by RMSE (based on Test set)") +
+  geom_text(aes(label = round(RMSE, digits = 2)), size = 3,
+            position = position_dodge(0.9), vjust = -0.5) +
+  ggtitle("Performances des modèles par RMSE (basé sur le Test set)") +
   scale_fill_manual(values=c("blue3", "green3"))
 
 # Rsquared 
 ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F), 
-                      y = Rsquared, fill = Category)) +
+                      y = Rsquared, fill = Catégorie)) +
   geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
-  labs(x = "", y = "Rsquared",
+  labs(x = "", y = "Rsquared", 
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
-  ggtitle("Models Performances by Rsquared (based on Test set)") +
+  geom_text(aes(label = round(Rsquared, digits = 2)), size = 3,
+            position = position_dodge(0.9), vjust = -0.5) +
+  ggtitle("Performances des modèles par Rcarré (basé sur le Test set)") +
   scale_fill_manual(values=c("blue3", "green3"))
 ```
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 rf_varImp <- data.frame(variables = row.names(varImp(rf_fit)$importance),
-                        varImp(rf_fit)$importance) 
+                        varImp(rf_fit)$importance)
 
 ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
                                          y=Overall,
@@ -1108,12 +1120,32 @@ ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
 
 ## Prediction vs Actual
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
-results <- as.data.frame (cbind (exp(data_test$log_price), exp(xgboost_pred)))
-results <- results %>% rename (Actuals = V1,
-                   Predictions = V2)
-results$Gap <- abs(results$Actuals - results$Predictions)
-head (results)
-summary(results$Gap)
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T, eval = F}
+
+difference = data.frame(real_price = exp(data_test$log_price))
+for (i in pred_list){
+  x <- as.data.frame(abs(exp(get(i)) - exp(data_test$log_price)))
+  names(x) <- paste(substr(i,1,nchar(i)-5),"diff", sep="_")
+  difference <- cbind(difference, x)
+}
+
+summary_difference = data.frame()
+for (i in names(difference[,-c(1)])){
+  summary_difference <- rbind(summary_difference, summary(difference[,i]))
+}
+
+names(summary_difference) <- c("Min", "1st Qu.", "Median", 
+                               "Mean", "3rd Qu.", "Max")
+summary_difference$model <- models_list
+
+ggplot(data = summary_difference, 
+       aes(x = fct_reorder(model, Mean, .desc = T), y = Mean, fill = model)) +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
+  labs(x = "", y = "Différence moyenne avec les vrais prix", 
+       caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
+       The validation methode chosen was a 5 Fold Cross Validation") +
+  geom_text(aes(label = round(Mean, digits = 2)), size = 3,
+            position = position_dodge(0.9), vjust = -0.5) +
+  ggtitle("Différence en moyenne entre les prédictions et la réalité") 
 ```
 
