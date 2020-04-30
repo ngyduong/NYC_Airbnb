@@ -1092,7 +1092,7 @@ ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F),
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
 rf_varImp <- data.frame(variables = row.names(varImp(rf_fit)$importance),
-                        varImp(rf_fit)$importance)
+                        varImp(rf_fit)$importance) 
 
 ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
                                          y=Overall,
