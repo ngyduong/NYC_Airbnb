@@ -989,6 +989,21 @@ rf_fit <- readRDS("/Users/ngyduong/Documents/Machine Learning/Github_projects/Ne
 rf_pred <- predict(rf_fit, newdata = data_test)
 ```
 
+```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
+rf_varImp <- data.frame(variables = row.names(varImp(rf_fit)$importance),
+                        varImp(rf_fit)$importance)
+
+ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
+                                         y=Overall,
+                                         fill=variables)) +
+  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
+  theme(plot.title = element_text(hjust = 0.5),
+               plot.background = element_rect(fill = "#BFD5E3"),
+               legend.position = "none") + 
+  labs(x = "", y = "", caption = tag_source_models) +
+  ggtitle("Random Forest: Variables d'importances") 
+```
+
 ## Comparaison of models (Train set)
 
 ### RMSE and R2 based on Train set
@@ -1102,22 +1117,6 @@ ggplot(data = df, aes(x = fct_reorder(model, Rsquared, .desc = F),
   scale_fill_manual(values=c("blue3", "green3"))
 ```
 
-```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T}
-rf_varImp <- data.frame(variables = row.names(varImp(rf_fit)$importance),
-                        varImp(rf_fit)$importance)
-
-ggplot(data = rf_varImp, mapping = aes(x=reorder(variables, Overall),
-                                         y=Overall,
-                                         fill=variables)) +
-  coord_flip() + geom_bar(stat = "identity", position = "dodge") +
-  theme(plot.title = element_text(hjust = 0.5),
-               plot.background = element_rect(fill = "#BFD5E3"),
-               legend.position = "none") + 
-  labs(x = "", y = "", caption = tag_source_models) +
-  ggtitle("Random Forest: Variables d'importances") 
-```
-
-
 ## Prediction vs Actual
 
 ```{r cache=TRUE,include=T,message=FALSE, warning=FALSE, echo=T, eval = F}
@@ -1137,15 +1136,16 @@ for (i in names(difference[,-c(1)])){
 names(summary_difference) <- c("Min", "1st Qu.", "Median", 
                                "Mean", "3rd Qu.", "Max")
 summary_difference$model <- models_list
+summary_difference$diff_prix <-
+  paste("$",as.character(round(summary_difference$Mean,2)),sep="")
 
 ggplot(data = summary_difference, 
        aes(x = fct_reorder(model, Mean, .desc = T), y = Mean, fill = model)) +
-  geom_bar(stat = "identity", alpha=0.5) + theme_models2 +
+  geom_bar(stat = "identity", alpha=0.5) + theme_models +
   labs(x = "", y = "Différence moyenne avec les vrais prix", 
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
-  geom_text(aes(label = round(Mean, digits = 2)), size = 3,
-            position = position_dodge(0.9), vjust = -0.5) +
+  geom_text(aes(label = diff_prix, vjust = -0.3)) +
   ggtitle("Différence en moyenne entre les prédictions et la réalité") 
 ```
 
