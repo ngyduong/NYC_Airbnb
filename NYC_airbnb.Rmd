@@ -1133,19 +1133,21 @@ for (i in names(difference[,-c(1)])){
   summary_difference <- rbind(summary_difference, summary(difference[,i]))
 }
 
+summary_difference <- round(summary_difference,2)
+
 names(summary_difference) <- c("Min", "1st Qu.", "Median", 
                                "Mean", "3rd Qu.", "Max")
 summary_difference$model <- models_list
-summary_difference$diff_prix <-
-  paste("$",as.character(round(summary_difference$Mean,2)),sep="")
+summary_difference$diff_prix_median <-
+  paste("$",as.character(summary_difference$Median,2),sep="")
 
 ggplot(data = summary_difference, 
-       aes(x = fct_reorder(model, Mean, .desc = T), y = Mean, fill = model)) +
+       aes(x = fct_reorder(model, Median, .desc = T), y = Median, fill = model)) +
   geom_bar(stat = "identity", alpha=0.5) + theme_models +
-  labs(x = "", y = "Différence moyenne avec les vrais prix", 
+  labs(x = "", y = "Différence médiane avec les vrais prix", 
        caption = "All the models were fit using the Test set with 15689 observations and 21 variables.
        The validation methode chosen was a 5 Fold Cross Validation") +
-  geom_text(aes(label = diff_prix, vjust = -0.3)) +
-  ggtitle("Différence en moyenne entre les prédictions et la réalité") 
+  geom_text(aes(label = diff_prix_median, vjust = -0.3)) +
+  ggtitle("Différence en médiane entre les prédictions et la réalité") 
 ```
 
